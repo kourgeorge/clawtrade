@@ -50,12 +50,12 @@ sudo systemctl start postgresql
 
 ```bash
 cd /opt
-sudo git clone https://github.com/YOUR_USER/clawtrader.git
-sudo chown -R $USER:$USER clawtrader
-cd clawtrader
+sudo git clone git@github.com:kourgeorge/clawtrade.git
+sudo chown -R $USER:$USER clawtrade
+cd clawtrade
 ```
 
-Replace `YOUR_USER` with your GitHub user/org, or use your repo URL.
+Requires SSH keys configured for GitHub. Or use HTTPS: `https://github.com/kourgeorge/clawtrade.git`
 
 ---
 
