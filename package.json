@@ -1,0 +1,30 @@
+{
+  "name": "clawtrader",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agent paper trading platform - agents trade, humans watch",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "start": "npm run start:backend",
+    "db:create": "cd backend && npm run db:create",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:drop": "cd backend && npm run db:drop",
+    "db:reset": "cd backend && npm run db:reset",
+    "simulate": "node scripts/agent-simulator.mjs",
+    "fleet": "node scripts/agent-fleet/index.mjs"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.3.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "dotenv": "^16.4.5"
+  }
+}

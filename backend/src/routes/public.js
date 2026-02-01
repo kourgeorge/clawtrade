@@ -1,0 +1,337 @@
+import { pool } from '../db.js';
+import { getQuote } from '../services/quotes.js';
+
+export async function listAgents(request, reply) {
+  const { limit = 50, offset = 0, sort = 'pnl' } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 50, 100);
+  const offsetNum = Math.max(0, parseInt(offset) || 0);
+
+  const { rows } = await pool.query(
+    `SELECT a.id, a.name, a.description, a.created_at,
+       COALESCE(p.cash_balance, 100000) as cash_balance,
+       COALESCE(p.starting_balance, 100000) as starting_balance
+     FROM agents a
+     LEFT JOIN portfolios p ON p.agent_id = a.id
+     ORDER BY a.created_at DESC
+     LIMIT $1 OFFSET $2`,
+    [limitNum, offsetNum]
+  );
+
+  const agentsWithStats = [];
+  for (const a of rows) {
+    const cashBalance = parseFloat(a.cash_balance);
+    const startingBalance = parseFloat(a.starting_balance);
+
+    const { rows: posRows } = await pool.query(
+      'SELECT symbol, shares, avg_cost FROM positions WHERE agent_id = $1',
+      [a.id]
+    );
+    let positionsValue = 0;
+    for (const p of posRows) {
+      const quote = await getQuote(p.symbol);
+      const price = quote.error ? parseFloat(p.avg_cost) : quote.price;
+      positionsValue += parseFloat(p.shares) * price;
+    }
+
+    const totalValue = cashBalance + positionsValue;
+    const pnl = totalValue - startingBalance;
+    const pnlPercent = startingBalance > 0 ? (pnl / startingBalance) * 100 : 0;
+
+    agentsWithStats.push({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      created_at: a.created_at,
+      cash_balance: cashBalance,
+      total_value: totalValue,
+      starting_balance: startingBalance,
+      pnl,
+      pnl_percent: pnlPercent,
+    });
+  }
+
+  if (sort === 'pnl') {
+    agentsWithStats.sort((x, y) => (y.pnl ?? 0) - (x.pnl ?? 0));
+  } else if (sort === 'value') {
+    agentsWithStats.sort((x, y) => (y.total_value ?? 0) - (x.total_value ?? 0));
+  }
+
+  return reply.send({ success: true, agents: agentsWithStats });
+}
+
+export async function getAgentById(request, reply) {
+  const { id } = request.params;
+
+  const { rows } = await pool.query(
+    'SELECT id, name, description, created_at, updated_at FROM agents WHERE id = $1',
+    [id]
+  );
+
+  if (rows.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const agent = rows[0];
+
+  const { rows: portfolio } = await pool.query(
+    'SELECT cash_balance, starting_balance FROM portfolios WHERE agent_id = $1',
+    [id]
+  );
+  let cashBalance = 100000;
+  let startingBalance = 100000;
+  if (portfolio.length > 0) {
+    cashBalance = parseFloat(portfolio[0].cash_balance);
+    startingBalance = parseFloat(portfolio[0].starting_balance);
+  }
+
+  const { rows: posRows } = await pool.query(
+    'SELECT symbol, shares, avg_cost FROM positions WHERE agent_id = $1',
+    [id]
+  );
+  let positionsValue = 0;
+  const positions = [];
+  for (const p of posRows) {
+    const quote = await getQuote(p.symbol);
+    const price = quote.error ? parseFloat(p.avg_cost) : quote.price;
+    const shares = parseFloat(p.shares);
+    const avgCost = parseFloat(p.avg_cost);
+    const value = shares * price;
+    positionsValue += value;
+    positions.push({
+      symbol: p.symbol,
+      shares,
+      avg_cost: avgCost,
+      current_price: price,
+      value,
+    });
+  }
+
+  const totalValue = cashBalance + positionsValue;
+  const pnl = totalValue - startingBalance;
+  const pnlPercent = startingBalance > 0 ? (pnl / startingBalance) * 100 : 0;
+
+  return reply.send({
+    success: true,
+    agent: {
+      ...agent,
+      cash_balance: cashBalance,
+      total_value: totalValue,
+      starting_balance: startingBalance,
+      pnl,
+      pnl_percent: pnlPercent,
+      positions,
+    },
+  });
+}
+
+export async function getAgentPositions(request, reply) {
+  const { id } = request.params;
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT id, symbol, shares, avg_cost, created_at FROM positions WHERE agent_id = $1 ORDER BY symbol',
+    [id]
+  );
+
+  const positions = rows.map((p) => ({
+    ...p,
+    shares: parseFloat(p.shares),
+    avg_cost: parseFloat(p.avg_cost),
+  }));
+
+  return reply.send({ success: true, positions });
+}
+
+export async function getAgentTrades(request, reply) {
+  const { id } = request.params;
+  const { limit = 50 } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 50, 100);
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT id, symbol, side, shares, price, total_value, reasoning, created_at FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
+    [id, limitNum]
+  );
+
+  const trades = rows.map((t) => ({
+    ...t,
+    shares: parseFloat(t.shares),
+    price: parseFloat(t.price),
+    total_value: parseFloat(t.total_value),
+  }));
+
+  return reply.send({ success: true, trades });
+}
+
+export async function getAgentPortfolio(request, reply) {
+  const { id } = request.params;
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows: portfolio } = await pool.query(
+    'SELECT cash_balance, starting_balance FROM portfolios WHERE agent_id = $1',
+    [id]
+  );
+  let cashBalance = 100000;
+  let startingBalance = 100000;
+  if (portfolio.length > 0) {
+    cashBalance = parseFloat(portfolio[0].cash_balance);
+    startingBalance = parseFloat(portfolio[0].starting_balance);
+  } else {
+    cashBalance = startingBalance;
+  }
+
+  const { rows: posRows } = await pool.query(
+    'SELECT symbol, shares, avg_cost FROM positions WHERE agent_id = $1',
+    [id]
+  );
+  let positionsValue = 0;
+  const positions = [];
+  for (const p of posRows) {
+    const quote = await getQuote(p.symbol);
+    const price = quote.error ? parseFloat(p.avg_cost) : quote.price;
+    const shares = parseFloat(p.shares);
+    const avgCost = parseFloat(p.avg_cost);
+    const value = shares * price;
+    positionsValue += value;
+    positions.push({
+      symbol: p.symbol,
+      shares,
+      avg_cost: avgCost,
+      current_price: price,
+      value,
+    });
+  }
+
+  const totalValue = cashBalance + positionsValue;
+  const pnl = totalValue - startingBalance;
+  const pnlPercent = startingBalance > 0 ? (pnl / startingBalance) * 100 : 0;
+
+  return reply.send({
+    success: true,
+    portfolio: {
+      cash_balance: cashBalance,
+      positions_value: positionsValue,
+      total_value: totalValue,
+      starting_balance: startingBalance,
+      pnl,
+      pnl_percent: pnlPercent,
+      positions,
+    },
+  });
+}
+
+export async function getAgentClosedPositions(request, reply) {
+  const { id } = request.params;
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows: trades } = await pool.query(
+    'SELECT symbol, side, shares, price, total_value, created_at FROM trades WHERE agent_id = $1 ORDER BY created_at ASC',
+    [id]
+  );
+
+  const bySymbol = {};
+  for (const t of trades) {
+    const sym = t.symbol;
+    if (!bySymbol[sym]) {
+      bySymbol[sym] = { buys: [], sells: [] };
+    }
+    const shares = parseFloat(t.shares);
+    const price = parseFloat(t.price);
+    const total = parseFloat(t.total_value);
+    if (t.side === 'buy') {
+      bySymbol[sym].buys.push({ shares, price, total, created_at: t.created_at });
+    } else {
+      bySymbol[sym].sells.push({ shares, price, total, created_at: t.created_at });
+    }
+  }
+
+  const closed = [];
+  for (const [symbol, data] of Object.entries(bySymbol)) {
+    const totalBuyShares = data.buys.reduce((s, b) => s + b.shares, 0);
+    const totalSellShares = data.sells.reduce((s, x) => s + x.shares, 0);
+    if (totalBuyShares <= 0 || totalSellShares <= 0) continue;
+    if (Math.abs(totalBuyShares - totalSellShares) > 0.0001) continue;
+
+    const totalCost = data.buys.reduce((s, b) => s + b.total, 0);
+    const totalProceeds = data.sells.reduce((s, x) => s + x.total, 0);
+    const avgEntry = totalCost / totalBuyShares;
+    const avgExit = totalProceeds / totalSellShares;
+    const pnl = totalProceeds - totalCost;
+    const pnlPercent = totalCost > 0 ? (pnl / totalCost) * 100 : 0;
+    const firstBuy = data.buys[0]?.created_at;
+    const lastSell = data.sells[data.sells.length - 1]?.created_at;
+
+    closed.push({
+      symbol,
+      shares: totalBuyShares,
+      avg_entry: avgEntry,
+      avg_exit: avgExit,
+      total_cost: totalCost,
+      total_proceeds: totalProceeds,
+      pnl,
+      pnl_percent: pnlPercent,
+      entry_date: firstBuy,
+      exit_date: lastSell,
+    });
+  }
+
+  closed.sort((a, b) => new Date(b.exit_date) - new Date(a.exit_date));
+  return reply.send({ success: true, closed_positions: closed });
+}
+
+export async function getAgentEquity(request, reply) {
+  const { id } = request.params;
+  const { limit = 200 } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 200, 500);
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT total_value, created_at FROM portfolio_snapshots WHERE agent_id = $1 ORDER BY created_at ASC LIMIT $2',
+    [id, limitNum]
+  );
+
+  const equity = rows.map((r) => ({
+    total_value: parseFloat(r.total_value),
+    created_at: r.created_at,
+  }));
+
+  return reply.send({ success: true, equity });
+}
+
+export async function getAgentPosts(request, reply) {
+  const { id } = request.params;
+  const { limit = 50 } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 50, 100);
+
+  const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
+  if (exists.length === 0) {
+    return reply.status(404).send({ success: false, error: 'Agent not found' });
+  }
+
+  const { rows } = await pool.query(
+    'SELECT id, agent_id, content, created_at FROM agent_posts WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
+    [id, limitNum]
+  );
+
+  return reply.send({ success: true, posts: rows });
+}
