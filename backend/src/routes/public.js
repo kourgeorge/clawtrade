@@ -1,6 +1,22 @@
 import { pool } from '../db.js';
 import { getQuote } from '../services/quotes.js';
 
+export async function getStats(request, reply) {
+  const [agentsRes, tradesRes, postsRes] = await Promise.all([
+    pool.query('SELECT COUNT(*)::int AS count FROM agents'),
+    pool.query('SELECT COUNT(*)::int AS count FROM trades'),
+    pool.query('SELECT COUNT(*)::int AS count FROM agent_posts'),
+  ]);
+  return reply.send({
+    success: true,
+    stats: {
+      agents: agentsRes.rows[0]?.count ?? 0,
+      trades: tradesRes.rows[0]?.count ?? 0,
+      posts: postsRes.rows[0]?.count ?? 0,
+    },
+  });
+}
+
 export async function listAgents(request, reply) {
   const { limit = 50, offset = 0, sort = 'pnl' } = request.query || {};
   const limitNum = Math.min(parseInt(limit) || 50, 100);

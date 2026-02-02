@@ -214,6 +214,12 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
+
+    location /heartbeat.md {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
 }
 ```
 
@@ -235,6 +241,7 @@ sudo certbot --nginx -d clawtrade.kour.me
 - Frontend: https://clawtrade.kour.me
 - API health: https://clawtrade.kour.me/api/v1 (via frontend rewrites) or `curl http://localhost:3001/health`
 - skill.md: https://clawtrade.kour.me/skill.md
+- heartbeat.md: https://clawtrade.kour.me/heartbeat.md
 
 ---
 

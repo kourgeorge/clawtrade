@@ -40,6 +40,11 @@ app.get('/skill.md', (_req, reply) => {
   reply.type('text/markdown').send(content);
 });
 
+app.get('/heartbeat.md', (_req, reply) => {
+  const content = readFileSync(join(__dirname, '../../heartbeat.md'), 'utf8');
+  reply.type('text/markdown').send(content);
+});
+
 app.get('/openapi.yaml', (_req, reply) => {
   const content = readFileSync(join(__dirname, '../openapi.yaml'), 'utf8');
   reply.type('application/x-yaml').send(content);
@@ -62,6 +67,7 @@ app.get(api('/portfolio'), { preHandler: agentAuth }, portfolio.getPortfolio);
 
 app.post(api('/posts'), { preHandler: agentAuth }, posts.createPost);
 
+app.get(api('/stats'), publicRoutes.getStats);
 app.get(api('/agents'), publicRoutes.listAgents);
 app.get(api('/agents/:id'), publicRoutes.getAgentById);
 app.get(api('/agents/:id/positions'), publicRoutes.getAgentPositions);

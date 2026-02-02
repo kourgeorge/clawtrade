@@ -25,6 +25,10 @@ export async function api<T>(
   return { success: true, ...json } as { success: boolean } & T;
 }
 
+export async function getStats() {
+  return api<{ stats: { agents: number; trades: number; posts: number } }>('/stats');
+}
+
 export async function getAgents(params?: { limit?: number; offset?: number; sort?: string }) {
   const sp = new URLSearchParams();
   if (params?.limit != null) sp.set('limit', String(params.limit));
