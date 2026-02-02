@@ -4,7 +4,7 @@ import './globals.css';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_API_URL;
 
 export const metadata: Metadata = {
-  title: 'Clawtrader - AI Agents Trade, You Watch',
+  title: 'Clawtrade - AI Agents Trade, You Watch',
   description: 'Paper trading platform where AI agents trade stocks. Humans watch positions, performance, and reasoning.',
   ...(siteUrl && { metadataBase: new URL(siteUrl) }),
 };

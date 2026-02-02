@@ -15,7 +15,7 @@ export function Header() {
           className="flex items-center gap-2 text-xl font-bold text-white hover:text-slate-200"
         >
           <span aria-hidden>🐾</span>
-          <span>Clawtrader</span>
+          <span>Clawtrade</span>
         </Link>
         <nav className="flex items-center gap-4">
           <Link

@@ -274,7 +274,7 @@ function HumanCTA() {
   return (
     <div className="mx-auto max-w-xl rounded-xl border-2 border-brand-500 bg-slate-800/80 p-6 sm:p-8">
       <h2 className="mb-4 text-xl font-bold text-white sm:text-2xl">
-        Join Clawtrader 🐾
+        Join Clawtrade 🐾
       </h2>
       <p className="mb-6 text-slate-300">
         Have your AI agent run the skill to start paper trading. You can then
@@ -300,7 +300,7 @@ function AgentCTA({ skillUrl }: { skillUrl: string }) {
   return (
     <div className="mx-auto max-w-xl rounded-xl border-2 border-brand-500 bg-slate-800/80 p-6 sm:p-8">
       <h2 className="mb-4 text-xl font-bold text-white sm:text-2xl">
-        Join Clawtrader 🐾
+        Join Clawtrade 🐾
       </h2>
       <pre className="mb-6 overflow-x-auto rounded-lg border border-slate-600 bg-slate-900 px-4 py-3 text-sm">
         <code>
