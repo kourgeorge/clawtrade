@@ -26,6 +26,7 @@ import {
   getAgentTrades,
   getAgentClosedPositions,
   getAgentPosts,
+  parseUTC,
   type AgentProfile,
   type Trade,
   type ClosedPosition,
@@ -43,7 +44,7 @@ function formatPercent(pct: number) {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('en-US', {
+  return parseUTC(iso).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -53,12 +54,14 @@ function formatDate(iso: string) {
 }
 
 function formatJoinDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return parseUTC(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
 }
+
+const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -69,6 +72,7 @@ export default function AgentDetailPage() {
   const [posts, setPosts] = useState<AgentPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [monthlyPnlYear, setMonthlyPnlYear] = useState(() => new Date().getFullYear());
 
   useEffect(() => {
     const fetchData = () => {
@@ -100,7 +104,7 @@ export default function AgentDetailPage() {
     return () => clearInterval(intervalId);
   }, [id]);
 
-  const { stats, monthlyPnl, cumulativeRealizedPnl } = useMemo(() => {
+  const { stats, monthlyPnlFullYear, cumulativeRealizedPnl } = useMemo(() => {
     const closed = closedPositions;
     const totalTrades = trades.length;
     const closedCount = closed.length;
@@ -112,22 +116,25 @@ export default function AgentDetailPage() {
 
     const byMonth: Record<string, number> = {};
     for (const c of closed) {
-      const d = new Date(c.exit_date);
+      const d = parseUTC(c.exit_date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       byMonth[key] = (byMonth[key] ?? 0) + c.pnl;
     }
-    const monthlyPnl = Object.entries(byMonth)
-      .map(([period, pnl]) => ({ period, pnl, label: period }))
-      .sort((a, b) => a.period.localeCompare(b.period));
+    // Full year (12 months) for the selected year: Jan–Dec with short labels
+    const monthlyPnlFullYear = MONTH_LABELS.map((label, i) => {
+      const month = i + 1;
+      const period = `${monthlyPnlYear}-${String(month).padStart(2, '0')}`;
+      return { period, label, pnl: byMonth[period] ?? 0 };
+    });
 
     const sortedByExit = [...closed].sort(
-      (a, b) => new Date(a.exit_date).getTime() - new Date(b.exit_date).getTime()
+      (a, b) => parseUTC(a.exit_date).getTime() - parseUTC(b.exit_date).getTime()
     );
     let cum = 0;
     const cumulativeRealizedPnl = sortedByExit.map((c) => {
       cum += c.pnl;
       return {
-        date: new Date(c.exit_date).toLocaleDateString('en-US', {
+        date: parseUTC(c.exit_date).toLocaleDateString('en-US', {
           month: 'short',
           day: 'numeric',
           year: '2-digit',
@@ -147,10 +154,10 @@ export default function AgentDetailPage() {
         avgPnlPerClosed,
         totalRealizedPnl,
       },
-      monthlyPnl,
+      monthlyPnlFullYear,
       cumulativeRealizedPnl,
     };
-  }, [trades.length, closedPositions]);
+  }, [trades.length, closedPositions, monthlyPnlYear]);
 
   const positionPieData = useMemo(() => {
     if (!agent) return [];
@@ -422,66 +429,83 @@ export default function AgentDetailPage() {
             </div>
           )}
 
-          {monthlyPnl.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
+          <div className="mb-6">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-medium uppercase tracking-wider text-slate-500">
                 Monthly realized P&L
               </h2>
-              <div className="h-48 w-full sm:h-56">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={monthlyPnl}
-                    margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis
-                      dataKey="period"
-                      stroke="#94a3b8"
-                      tick={{ fontSize: 10 }}
-                    />
-                    <YAxis
-                      stroke="#94a3b8"
-                      tick={{ fontSize: 11 }}
-                      tickFormatter={(v) =>
-                        `$${v >= 0 ? '' : '-'}${Math.abs(v / 1000).toFixed(0)}k`
-                      }
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: '#1e293b',
-                        border: '1px solid #334155',
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number) => [
-                        `$${value.toLocaleString('en-US', {
-                          minimumFractionDigits: 2,
-                        })}`,
-                        'P&L',
-                      ]}
-                    />
-                    <Bar
-                      dataKey="pnl"
-                      radius={[2, 2, 0, 0]}
-                      fillOpacity={0.9}
-                    >
-                      {monthlyPnl.map((entry, i) => (
-                        <Cell
-                          key={i}
-                          fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <select
+                value={monthlyPnlYear}
+                onChange={(e) => setMonthlyPnlYear(Number(e.target.value))}
+                className="rounded border border-slate-600 bg-slate-800 px-2 py-1 text-sm text-slate-200 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                aria-label="Select year"
+              >
+                {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+            <div className="h-48 w-full sm:h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={monthlyPnlFullYear}
+                  margin={{ top: 5, right: 5, left: 5, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                  <XAxis
+                    dataKey="label"
+                    stroke="#94a3b8"
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis
+                    stroke="#94a3b8"
+                    tick={{ fontSize: 11 }}
+                    tickFormatter={(v) =>
+                      `$${v >= 0 ? '' : '-'}${Math.abs(v / 1000).toFixed(0)}k`
+                    }
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#1e293b',
+                      border: '1px solid #334155',
+                      borderRadius: '8px',
+                    }}
+                    formatter={(value: number) => [
+                      `$${Number(value).toLocaleString('en-US', {
+                        minimumFractionDigits: 2,
+                      })}`,
+                      'P&L',
+                    ]}
+                  />
+                  <Bar
+                    dataKey="pnl"
+                    radius={[2, 2, 0, 0]}
+                    fillOpacity={0.9}
+                  >
+                    {monthlyPnlFullYear.map((entry, i) => (
+                      <Cell
+                        key={i}
+                        fill={entry.pnl >= 0 ? '#10b981' : '#ef4444'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            {monthlyPnlFullYear.every((m) => m.pnl === 0) && (
+              <p className="mt-2 text-center text-xs text-slate-500">
+                No closed positions this year. Realized P&L appears when the agent closes positions (sells all shares of a symbol).
+              </p>
+            )}
+          </div>
 
-          {cumulativeRealizedPnl.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
-                Cumulative realized P&L
-              </h2>
+          <div className="mb-6">
+            <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
+              Cumulative realized P&L
+            </h2>
+            {cumulativeRealizedPnl.length > 0 ? (
               <div className="h-48 w-full sm:h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
@@ -524,8 +548,12 @@ export default function AgentDetailPage() {
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="py-8 text-center text-slate-500">
+                No closed positions yet. Cumulative realized P&L will appear here once the agent closes positions.
+              </p>
+            )}
+          </div>
 
           <div className="mb-6">
             <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">

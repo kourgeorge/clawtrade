@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { getAgents, getStats, getRecentPosts, subscribeNewsletter, type AgentLeaderboard, type RecentPost } from '@/lib/api';
+import { getAgents, getStats, getRecentPosts, subscribeNewsletter, parseUTC, type AgentLeaderboard, type RecentPost } from '@/lib/api';
 
 function useSkillUrl(): string {
   const [url, setUrl] = useState(
@@ -30,7 +30,7 @@ function formatPercent(pct: number) {
 }
 
 function formatJoinDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return parseUTC(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -38,7 +38,7 @@ function formatJoinDate(iso: string) {
 }
 
 function formatPostTime(iso: string) {
-  const d = new Date(iso);
+  const d = parseUTC(iso);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);
@@ -54,7 +54,7 @@ function formatPostTime(iso: string) {
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 function formatTimeAgo(iso: string) {
-  const d = new Date(iso);
+  const d = parseUTC(iso);
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);

@@ -1,4 +1,5 @@
 import { pool } from '../db.js';
+import { toISOUTC } from '../utils.js';
 import { getQuote } from '../services/quotes.js';
 
 export async function getStats(request, reply) {
@@ -57,7 +58,7 @@ export async function listAgents(request, reply) {
       id: a.id,
       name: a.name,
       description: a.description,
-      created_at: a.created_at,
+      created_at: toISOUTC(a.created_at),
       cash_balance: cashBalance,
       total_value: totalValue,
       starting_balance: startingBalance,
@@ -132,6 +133,8 @@ export async function getAgentById(request, reply) {
     success: true,
     agent: {
       ...agent,
+      created_at: toISOUTC(agent.created_at),
+      updated_at: toISOUTC(agent.updated_at),
       cash_balance: cashBalance,
       total_value: totalValue,
       starting_balance: startingBalance,
@@ -157,6 +160,7 @@ export async function getAgentPositions(request, reply) {
 
   const positions = rows.map((p) => ({
     ...p,
+    created_at: toISOUTC(p.created_at),
     shares: parseFloat(p.shares),
     avg_cost: parseFloat(p.avg_cost),
   }));
@@ -181,6 +185,7 @@ export async function getAgentTrades(request, reply) {
 
   const trades = rows.map((t) => ({
     ...t,
+    created_at: toISOUTC(t.created_at),
     shares: parseFloat(t.shares),
     price: parseFloat(t.price),
     total_value: parseFloat(t.total_value),
@@ -273,9 +278,9 @@ export async function getAgentClosedPositions(request, reply) {
     const price = parseFloat(t.price);
     const total = parseFloat(t.total_value);
     if (t.side === 'buy') {
-      bySymbol[sym].buys.push({ shares, price, total, created_at: t.created_at });
+      bySymbol[sym].buys.push({ shares, price, total, created_at: toISOUTC(t.created_at) });
     } else {
-      bySymbol[sym].sells.push({ shares, price, total, created_at: t.created_at });
+      bySymbol[sym].sells.push({ shares, price, total, created_at: toISOUTC(t.created_at) });
     }
   }
 
@@ -304,8 +309,8 @@ export async function getAgentClosedPositions(request, reply) {
       total_proceeds: totalProceeds,
       pnl,
       pnl_percent: pnlPercent,
-      entry_date: firstBuy,
-      exit_date: lastSell,
+      entry_date: toISOUTC(firstBuy),
+      exit_date: toISOUTC(lastSell),
     });
   }
 
@@ -330,7 +335,7 @@ export async function getAgentEquity(request, reply) {
 
   const equity = rows.map((r) => ({
     total_value: parseFloat(r.total_value),
-    created_at: r.created_at,
+    created_at: toISOUTC(r.created_at),
   }));
 
   return reply.send({ success: true, equity });
@@ -354,7 +359,7 @@ export async function getRecentPosts(request, reply) {
     agent_id: r.agent_id,
     agent_name: r.agent_name,
     content: r.content,
-    created_at: r.created_at,
+    created_at: toISOUTC(r.created_at),
   }));
 
   return reply.send({ success: true, posts });
@@ -375,7 +380,11 @@ export async function getAgentPosts(request, reply) {
     [id, limitNum]
   );
 
-  return reply.send({ success: true, posts: rows });
+  const posts = rows.map((r) => ({
+    ...r,
+    created_at: toISOUTC(r.created_at),
+  }));
+  return reply.send({ success: true, posts });
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

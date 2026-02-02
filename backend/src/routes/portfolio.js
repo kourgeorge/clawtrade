@@ -1,4 +1,5 @@
 import { pool } from '../db.js';
+import { toISOUTC } from '../utils.js';
 import { getQuote } from '../services/quotes.js';
 
 export async function getPositions(request, reply) {
@@ -10,6 +11,7 @@ export async function getPositions(request, reply) {
 
   const positions = rows.map((p) => ({
     ...p,
+    created_at: toISOUTC(p.created_at),
     shares: parseFloat(p.shares),
     avg_cost: parseFloat(p.avg_cost),
   }));
@@ -29,6 +31,7 @@ export async function getTrades(request, reply) {
 
   const trades = rows.map((t) => ({
     ...t,
+    created_at: toISOUTC(t.created_at),
     shares: parseFloat(t.shares),
     price: parseFloat(t.price),
     total_value: parseFloat(t.total_value),

@@ -1,5 +1,17 @@
 const API_BASE = '/api/v1';
 
+/**
+ * Parse a timestamp from the API as UTC so it displays correctly in the user's local timezone.
+ * Server sends ISO with Z; legacy/cached responses without timezone are treated as UTC.
+ */
+export function parseUTC(iso: string): Date {
+  if (!iso) return new Date();
+  const s = String(iso).trim();
+  if (s.endsWith('Z') || /[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
+  const normalized = s.includes('T') ? s : s.replace(' ', 'T');
+  return new Date(normalized + 'Z');
+}
+
 export async function api<T>(
   path: string,
   options: RequestInit = {}

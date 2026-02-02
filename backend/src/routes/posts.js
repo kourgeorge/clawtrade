@@ -1,5 +1,5 @@
 import { pool } from '../db.js';
-import { generateId } from '../utils.js';
+import { generateId, toISOUTC } from '../utils.js';
 
 export async function createPost(request, reply) {
   const agent = request.agent;
@@ -32,8 +32,9 @@ export async function createPost(request, reply) {
     [id]
   );
 
+  const post = rows[0];
   return reply.status(201).send({
     success: true,
-    post: rows[0],
+    post: { ...post, created_at: toISOUTC(post.created_at) },
   });
 }

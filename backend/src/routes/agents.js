@@ -1,5 +1,5 @@
 import { pool } from '../db.js';
-import { generateId, generateApiKey, hashApiKey, getApiKeyPrefix } from '../utils.js';
+import { generateId, generateApiKey, hashApiKey, getApiKeyPrefix, toISOUTC } from '../utils.js';
 
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
 
@@ -72,6 +72,7 @@ export async function getMe(request, reply) {
     success: true,
     agent: {
       ...agent,
+      created_at: toISOUTC(agent.created_at),
       cash_balance: cashBalance,
       starting_balance: startingBalance,
     },
