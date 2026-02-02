@@ -42,19 +42,28 @@ async function registerFleet(count) {
     const t = templates[i];
     const name = count > 1 ? `${t.name} ${suffix}-${i + 1}` : `${t.name} ${suffix}`;
     const agent = await api.registerAgent({ name, description: t.description });
-    agents.push(agent);
+    agents.push({ ...agent, description: agent.description ?? t.description });
     console.log(`  Registered: ${agent.name}`);
   }
   return agents;
 }
 
+function enrichAgentsWithDescription(agents) {
+  return agents.map((a) => {
+    if (a.description) return a;
+    const template = AGENT_TEMPLATES.find((t) => a.name.startsWith(t.name));
+    return { ...a, description: template?.description ?? 'General trading approach' };
+  });
+}
+
 async function ensureAgents() {
-  const saved = await loadAgents();
-  if (saved && saved.length > 0) {
-    console.log(`  Loaded ${saved.length} persisted agents`);
-    return saved;
+  let agents = await loadAgents();
+  if (agents && agents.length > 0) {
+    console.log(`  Loaded ${agents.length} persisted agents`);
+    agents = enrichAgentsWithDescription(agents);
+    return agents;
   }
-  const agents = await registerFleet(NUM_AGENTS);
+  agents = await registerFleet(NUM_AGENTS);
   await saveAgents(agents);
   console.log(`  Saved agents to ${process.env.FLEET_AGENTS_FILE || '.fleet-agents.json'}`);
   return agents;

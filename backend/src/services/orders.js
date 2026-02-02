@@ -3,6 +3,7 @@ import { generateId } from '../utils.js';
 import { getQuote } from './quotes.js';
 
 const STARTING_BALANCE = 100000;
+const MIN_ORDER_SHARES = 0.001;
 
 async function savePortfolioSnapshot(pool, agentId, genId) {
   const { rows: p } = await pool.query(
@@ -70,8 +71,8 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
     return { success: false, error: 'shares or amount is required' };
   }
 
-  if (!Number.isFinite(tradeShares) || tradeShares <= 0) {
-    return { success: false, error: 'shares or amount must yield positive shares' };
+  if (!Number.isFinite(tradeShares) || tradeShares < MIN_ORDER_SHARES) {
+    return { success: false, error: `minimum order size is ${MIN_ORDER_SHARES} shares` };
   }
 
   const portfolio = await ensurePortfolio(agentId);

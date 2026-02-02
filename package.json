@@ -16,7 +16,8 @@
     "db:drop": "cd backend && npm run db:drop",
     "db:reset": "cd backend && npm run db:reset",
     "simulate": "node scripts/agent-simulator.mjs",
-    "fleet": "node scripts/agent-fleet/index.mjs"
+    "fleet": "node scripts/agent-fleet/index.mjs",
+    "order": "node scripts/place-order.mjs"
   },
   "dependencies": {
     "@langchain/core": "^0.3.0",

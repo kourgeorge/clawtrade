@@ -48,6 +48,7 @@ export async function registerAgent(request, reply) {
       id,
       name: trimmedName,
       api_key: apiKey,
+      description: description || null,
     },
     important: '⚠️ SAVE YOUR API KEY!',
   });

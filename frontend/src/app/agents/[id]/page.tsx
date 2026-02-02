@@ -50,6 +50,7 @@ function formatDate(iso: string) {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
   });
 }
 
@@ -73,6 +74,8 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [monthlyPnlYear, setMonthlyPnlYear] = useState(() => new Date().getFullYear());
+  type PositionsTab = 'positions' | 'closed' | 'history';
+  const [positionsTab, setPositionsTab] = useState<PositionsTab>('positions');
 
   useEffect(() => {
     const fetchData = () => {
@@ -556,187 +559,234 @@ export default function AgentDetailPage() {
           </div>
 
           <div className="mb-6">
-            <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
-              Current Positions
-            </h2>
-            {agent.positions && agent.positions.length > 0 ? (
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-600 text-left text-slate-400">
-                      <th className="pb-2 pr-4">Symbol</th>
-                      <th className="pb-2 pr-4 text-right">Shares</th>
-                      <th className="pb-2 pr-4 text-right">Avg Cost</th>
-                      <th className="pb-2 pr-4 text-right">Current Price</th>
-                      <th className="pb-2 text-right">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agent.positions.map((p) => (
-                      <tr
-                        key={p.symbol}
-                        className="border-b border-slate-700/50"
-                      >
-                        <td className="py-2 pr-4 font-medium text-white">
-                          {p.symbol}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          {p.shares.toLocaleString()}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          ${p.avg_cost.toFixed(2)}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-200">
-                          ${(p.current_price ?? p.avg_cost).toFixed(2)}
-                        </td>
-                        <td className="py-2 text-right font-mono text-slate-200">
-                          $
-                          {(p.value ?? p.shares * (p.current_price ?? p.avg_cost)).toFixed(
-                            2
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="py-4 text-slate-500">No open positions.</p>
-            )}
-          </div>
-
-          {false && closedPositions.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
-                Historical Positions (Closed)
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-600 text-left text-slate-400">
-                      <th className="pb-2 pr-4">Symbol</th>
-                      <th className="pb-2 pr-4 text-right">Shares</th>
-                      <th className="pb-2 pr-4 text-right">Avg Entry</th>
-                      <th className="pb-2 pr-4 text-right">Avg Exit</th>
-                      <th className="pb-2 pr-4 text-right">P&L</th>
-                      <th className="pb-2 pr-4 text-right">P&L %</th>
-                      <th className="pb-2">Period</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {closedPositions.map((p) => (
-                      <tr
-                        key={`${p.symbol}-${p.exit_date}`}
-                        className="border-b border-slate-700/50"
-                      >
-                        <td className="py-2 pr-4 font-medium text-white">
-                          {p.symbol}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          {p.shares.toLocaleString()}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          ${p.avg_entry.toFixed(2)}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          ${p.avg_exit.toFixed(2)}
-                        </td>
-                        <td
-                          className={`py-2 pr-4 text-right font-mono font-medium ${
-                            p.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {formatPnl(p.pnl)}
-                        </td>
-                        <td
-                          className={`py-2 pr-4 text-right font-mono font-medium ${
-                            p.pnl_percent >= 0 ? 'text-emerald-400' : 'text-red-400'
-                          }`}
-                        >
-                          {formatPercent(p.pnl_percent)}
-                        </td>
-                        <td className="py-2 text-slate-400">
-                          {formatDate(p.entry_date)} → {formatDate(p.exit_date)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="mb-3 flex border-b border-slate-600">
+              <button
+                type="button"
+                onClick={() => setPositionsTab('positions')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  positionsTab === 'positions'
+                    ? 'border-b-2 border-brand-500 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Current Positions
+              </button>
+              <button
+                type="button"
+                onClick={() => setPositionsTab('closed')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  positionsTab === 'closed'
+                    ? 'border-b-2 border-brand-500 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Closed Trades
+                {closedPositions.length > 0 && (
+                  <span className="ml-1.5 rounded bg-slate-600 px-1.5 py-0.5 text-xs text-slate-300">
+                    {closedPositions.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setPositionsTab('history')}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  positionsTab === 'history'
+                    ? 'border-b-2 border-brand-500 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Trade History
+                {trades.length > 0 && (
+                  <span className="ml-1.5 rounded bg-slate-600 px-1.5 py-0.5 text-xs text-slate-300">
+                    {trades.length}
+                  </span>
+                )}
+              </button>
             </div>
-          )}
 
-          <div>
-            <h2 className="mb-3 text-sm font-medium uppercase tracking-wider text-slate-500">
-              Trade History
-            </h2>
-            {trades.length === 0 ? (
-              <p className="py-4 text-center text-slate-500">
-                No trades yet.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-600 text-left text-slate-400">
-                      <th className="pb-2 pr-4">Date</th>
-                      <th className="pb-2 pr-4">Side</th>
-                      <th className="pb-2 pr-4">Symbol</th>
-                      <th className="pb-2 pr-4 text-right">Shares</th>
-                      <th className="pb-2 pr-4 text-right">Price</th>
-                      <th className="pb-2 pr-4 text-right">Total</th>
-                      <th className="pb-2">Reasoning</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {trades.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="border-b border-slate-700/50"
-                      >
-                        <td className="py-2 pr-4 text-slate-400">
-                          {formatDate(t.created_at)}
-                        </td>
-                        <td className="py-2 pr-4">
-                          <span
-                            className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
-                              t.side === 'buy'
-                                ? 'bg-emerald-500/20 text-emerald-400'
-                                : 'bg-red-500/20 text-red-400'
-                            }`}
+            {positionsTab === 'positions' && (
+              <>
+                {agent.positions && agent.positions.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-600 text-left text-slate-400">
+                          <th className="pb-2 pr-4">Symbol</th>
+                          <th className="pb-2 pr-4 text-right">Shares</th>
+                          <th className="pb-2 pr-4 text-right">Avg Cost</th>
+                          <th className="pb-2 pr-4 text-right">Current Price</th>
+                          <th className="pb-2 text-right">Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {agent.positions.map((p) => (
+                          <tr
+                            key={p.symbol}
+                            className="border-b border-slate-700/50"
                           >
-                            {t.side.toUpperCase()}
-                          </span>
-                        </td>
-                        <td className="py-2 pr-4 font-medium text-white">
-                          {t.symbol}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          {t.shares.toLocaleString()}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          ${t.price.toFixed(2)}
-                        </td>
-                        <td className="py-2 pr-4 text-right font-mono text-slate-300">
-                          ${t.total_value.toFixed(2)}
-                        </td>
-                        <td className="max-w-xs py-2 text-slate-400">
-                          {t.reasoning ? (
-                            <span
-                              className="line-clamp-2"
-                              title={t.reasoning}
+                            <td className="py-2 pr-4 font-medium text-white">
+                              {p.symbol}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              {p.shares.toLocaleString()}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              ${p.avg_cost.toFixed(2)}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-200">
+                              ${(p.current_price ?? p.avg_cost).toFixed(2)}
+                            </td>
+                            <td className="py-2 text-right font-mono text-slate-200">
+                              $
+                              {(p.value ?? p.shares * (p.current_price ?? p.avg_cost)).toFixed(
+                                2
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="py-4 text-slate-500">No open positions.</p>
+                )}
+              </>
+            )}
+
+            {positionsTab === 'closed' && (
+              <>
+                {closedPositions.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-600 text-left text-slate-400">
+                          <th className="pb-2 pr-4">Symbol</th>
+                          <th className="pb-2 pr-4 text-right">Shares</th>
+                          <th className="pb-2 pr-4 text-right">Avg Entry</th>
+                          <th className="pb-2 pr-4 text-right">Avg Exit</th>
+                          <th className="pb-2 pr-4 text-right">P&L</th>
+                          <th className="pb-2 pr-4 text-right">P&L %</th>
+                          <th className="pb-2">Period</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {closedPositions.map((p) => (
+                          <tr
+                            key={`${p.symbol}-${p.exit_date}`}
+                            className="border-b border-slate-700/50"
+                          >
+                            <td className="py-2 pr-4 font-medium text-white">
+                              {p.symbol}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              {p.shares.toLocaleString()}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              ${p.avg_entry.toFixed(2)}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              ${p.avg_exit.toFixed(2)}
+                            </td>
+                            <td
+                              className={`py-2 pr-4 text-right font-mono font-medium ${
+                                p.pnl >= 0 ? 'text-emerald-400' : 'text-red-400'
+                              }`}
                             >
-                              {t.reasoning}
-                            </span>
-                          ) : (
-                            <span className="text-slate-600">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                              {formatPnl(p.pnl)}
+                            </td>
+                            <td
+                              className={`py-2 pr-4 text-right font-mono font-medium ${
+                                p.pnl_percent >= 0 ? 'text-emerald-400' : 'text-red-400'
+                              }`}
+                            >
+                              {formatPercent(p.pnl_percent)}
+                            </td>
+                            <td className="py-2 text-slate-400">
+                              {formatDate(p.entry_date)} → {formatDate(p.exit_date)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="py-4 text-slate-500">No closed trades yet.</p>
+                )}
+              </>
+            )}
+
+            {positionsTab === 'history' && (
+              <>
+                {trades.length === 0 ? (
+                  <p className="py-4 text-center text-slate-500">
+                    No trades yet.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-600 text-left text-slate-400">
+                          <th className="pb-2 pr-4">Date</th>
+                          <th className="pb-2 pr-4">Side</th>
+                          <th className="pb-2 pr-4">Symbol</th>
+                          <th className="pb-2 pr-4 text-right">Shares</th>
+                          <th className="pb-2 pr-4 text-right">Price</th>
+                          <th className="pb-2 pr-4 text-right">Total</th>
+                          <th className="pb-2">Reasoning</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {trades.map((t) => (
+                          <tr
+                            key={t.id}
+                            className="border-b border-slate-700/50"
+                          >
+                            <td className="py-2 pr-4 text-slate-400">
+                              {formatDate(t.created_at)}
+                            </td>
+                            <td className="py-2 pr-4">
+                              <span
+                                className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                                  t.side === 'buy'
+                                    ? 'bg-emerald-500/20 text-emerald-400'
+                                    : 'bg-red-500/20 text-red-400'
+                                }`}
+                              >
+                                {t.side.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="py-2 pr-4 font-medium text-white">
+                              {t.symbol}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              {t.shares.toLocaleString()}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              ${t.price.toFixed(2)}
+                            </td>
+                            <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                              ${t.total_value.toFixed(2)}
+                            </td>
+                            <td className="max-w-xs py-2 text-slate-400">
+                              {t.reasoning ? (
+                                <span
+                                  className="line-clamp-2"
+                                  title={t.reasoning}
+                                >
+                                  {t.reasoning}
+                                </span>
+                              ) : (
+                                <span className="text-slate-600">—</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -24,12 +24,6 @@ export function Header() {
           >
             Leaderboard
           </Link>
-          <Link
-            href="/#agents"
-            className="text-slate-400 hover:text-white"
-          >
-            Agents
-          </Link>
           <a
             href="/skill.md"
             target="_blank"

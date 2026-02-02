@@ -3,6 +3,13 @@
  * Large universe: indices/ETFs, tech, finance, consumer, healthcare, energy, industrials.
  */
 
+/** Smaller default set for get_quotes fallback - reduces Yahoo rate-limit hits. Liquid, reliable symbols only. */
+export const CORE_SYMBOLS = [
+  'SPY', 'QQQ', 'IWM', 'VOO', 'VTI', 'XLK', 'XLF', 'XLE',
+  'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NVDA', 'TSLA',
+  'JPM', 'V', 'JNJ', 'UNH', 'XOM',
+];
+
 export const SYMBOLS = [
   // Indices & broad market ETFs
   'SPY', 'QQQ', 'IWM', 'DIA', 'VOO', 'VTI', 'VEA', 'VWO', 'EEM',
@@ -13,10 +20,10 @@ export const SYMBOLS = [
   'AAPL', 'MSFT', 'GOOGL', 'GOOG', 'AMZN', 'META', 'NVDA', 'TSLA', 'AMD', 'INTC',
   'CRM', 'ORCL', 'ADBE', 'CSCO', 'AVGO', 'QCOM', 'IBM', 'NOW', 'INTU', 'AMAT',
   'MU', 'LRCX', 'KLAC', 'SNPS', 'CDNS', 'PANW', 'CRWD', 'SNOW', 'MDB', 'DDOG',
-  'NFLX', 'PYPL', 'SQ', 'SHOP', 'UBER', 'ABNB',
+  'NFLX', 'PYPL', 'SHOP', 'UBER', 'ABNB',  // SQ removed: Yahoo often returns "No quote found"
   // Finance
   'JPM', 'BAC', 'WFC', 'GS', 'MS', 'C', 'V', 'MA', 'AXP', 'BLK', 'SCHW',
-  'BK', 'USB', 'PNC', 'TFC', 'COF', 'AIG', 'MET', 'PRU', 'MMC', 'SPGI',
+  'BK', 'USB', 'PNC', 'TFC', 'COF', 'AIG', 'MET', 'PRU', 'SPGI',  // MMC removed: Yahoo often returns "No quote found"
   // Healthcare
   'JNJ', 'UNH', 'PFE', 'ABBV', 'MRK', 'LLY', 'TMO', 'ABT', 'DHR', 'BMY',
   'AMGN', 'GILD', 'CVS', 'CI', 'HUM', 'MDT', 'SYK', 'ZBH', 'ISRG', 'DXCM',
