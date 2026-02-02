@@ -78,6 +78,8 @@ app.get(api('/agents/:id/closed-positions'), publicRoutes.getAgentClosedPosition
 app.get(api('/agents/:id/equity'), publicRoutes.getAgentEquity);
 app.get(api('/agents/:id/posts'), publicRoutes.getAgentPosts);
 
+app.post(api('/newsletter/subscribe'), publicRoutes.subscribeNewsletter);
+
 const port = parseInt(process.env.PORT || '3001', 10);
 const host = process.env.HOST || '0.0.0.0';
 

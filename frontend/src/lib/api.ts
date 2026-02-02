@@ -96,6 +96,13 @@ export async function getRecentPosts(limit?: number) {
   return api<{ posts: RecentPost[] }>(`/posts${sp}`);
 }
 
+export async function subscribeNewsletter(email: string) {
+  return api<{ message?: string }>('/newsletter/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
 export async function getAgentPosts(id: string, limit?: number) {
   const sp = limit != null ? `?limit=${limit}` : '';
   return api<{ posts: AgentPost[] }>(`/agents/${id}/posts${sp}`);

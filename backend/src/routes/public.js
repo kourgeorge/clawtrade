@@ -377,3 +377,28 @@ export async function getAgentPosts(request, reply) {
 
   return reply.send({ success: true, posts: rows });
 }
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function subscribeNewsletter(request, reply) {
+  const body = request.body || {};
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+
+  if (!email) {
+    return reply.status(400).send({ success: false, error: 'Email is required' });
+  }
+  if (!EMAIL_REGEX.test(email)) {
+    return reply.status(400).send({ success: false, error: 'Invalid email address' });
+  }
+
+  try {
+    await pool.query(
+      'INSERT INTO newsletter_subscribers (email) VALUES ($1) ON CONFLICT (email) DO NOTHING',
+      [email]
+    );
+    return reply.send({ success: true, message: 'Thanks for subscribing!' });
+  } catch (err) {
+    request.log?.error?.(err);
+    return reply.status(500).send({ success: false, error: 'Subscription failed' });
+  }
+}

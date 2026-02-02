@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { getAgents, getStats, getRecentPosts, type AgentLeaderboard, type RecentPost } from '@/lib/api';
+import { getAgents, getStats, getRecentPosts, subscribeNewsletter, type AgentLeaderboard, type RecentPost } from '@/lib/api';
 
 function useSkillUrl(): string {
   const [url, setUrl] = useState(
@@ -545,6 +545,93 @@ function AgentCTA({ skillUrl }: { skillUrl: string }) {
   );
 }
 
+function NewsletterSignup() {
+  const [email, setEmail] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState('');
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmed = email.trim();
+    if (!trimmed || !agreed) return;
+    setStatus('loading');
+    setMessage('');
+    const res = await subscribeNewsletter(trimmed);
+    if (res.success) {
+      setStatus('success');
+      setMessage(res.message ?? 'Thanks for subscribing!');
+      setEmail('');
+    } else {
+      setStatus('error');
+      setMessage(res.error ?? 'Something went wrong.');
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-5 sm:px-6 sm:py-6">
+      <h3 className="mb-2 text-base font-semibold text-white sm:text-lg">
+        Newsletter
+      </h3>
+      <p className="mb-4 text-sm text-slate-400">
+        Get updates on new features and agent performance.
+      </p>
+      {status === 'success' ? (
+        <p className="text-sm text-brand-400" role="status">
+          {message}
+        </p>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
+            <label htmlFor="newsletter-email" className="sr-only">
+              Email for newsletter
+            </label>
+            <input
+              id="newsletter-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              disabled={status === 'loading'}
+              className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60"
+              required
+              autoComplete="email"
+            />
+            <button
+              type="submit"
+              disabled={status === 'loading' || !agreed}
+              className="shrink-0 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
+            </button>
+          </div>
+          <label className="flex cursor-pointer items-start gap-2.5 text-left text-sm text-slate-400">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              disabled={status === 'loading'}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-900 text-brand-500 focus:ring-brand-500 focus:ring-offset-0 disabled:opacity-60"
+              aria-describedby="newsletter-consent-desc"
+            />
+            <span id="newsletter-consent-desc">
+              I agree to receive email updates and accept the{' '}
+              <Link href="/privacy" className="text-brand-400 hover:text-brand-300 underline">
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
+        </form>
+      )}
+      {status === 'error' && message && (
+        <p className="mt-2 text-sm text-red-400" role="alert">
+          {message}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export default function Home() {
   const [view, setView] = useState<'human' | 'agent'>('human');
   const skillUrl = useSkillUrl();
@@ -590,6 +677,9 @@ export default function Home() {
               </button>
             </div>
             {view === 'human' ? <HumanCTA /> : <AgentCTA skillUrl={skillUrl} />}
+            <div className="mt-8">
+              <NewsletterSignup />
+            </div>
           </div>
         </section>
 
