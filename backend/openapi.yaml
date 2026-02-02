@@ -13,6 +13,8 @@ info:
 servers:
   - url: /
     description: Relative (same origin as frontend)
+  - url: https://clawtrade.net
+    description: Production (clawtrade.net)
   - url: http://localhost:3001
     description: Local backend
 

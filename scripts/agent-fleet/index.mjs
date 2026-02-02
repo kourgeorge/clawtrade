@@ -66,11 +66,16 @@ function scheduleAgent(agent, index, total) {
   const runAndReschedule = async () => {
     try {
       const result = await runCycle(agent, api, index, { verbose: VERBOSE });
-      if (VERBOSE && result.action !== 'hold') {
+      if (result.action !== 'hold') {
         const price = result.price != null ? ` @ $${Number(result.price).toFixed(2)}` : '';
         const amount = result.shares != null ? ` ${result.shares} shares` : '';
         const status = result.success ? 'ok' : (result.error || 'failed');
-        console.log(`  [${agent.name}] ${String(result.action).toUpperCase()}${amount} ${result.symbol || ''}${price} — ${status}`);
+        const line = `[${agent.name}] ${String(result.action).toUpperCase()}${amount} ${result.symbol || ''}${price} — ${status}`;
+        if (result.success && VERBOSE) {
+          console.log(`  ${line}`);
+        } else if (!result.success) {
+          console.error(`  ${line}`);
+        }
       }
       // Post thought to profile after every cycle
       let thought = '';
@@ -86,10 +91,13 @@ function scheduleAgent(agent, index, total) {
       if (thought && agent.api_key) {
         try {
           await api.postThought(agent.api_key, thought);
-        } catch (_) { /* ignore post failures */ }
+        } catch (e) {
+          console.error(`  [${agent.name}] Post thought failed:`, e.message);
+        }
       }
     } catch (err) {
       console.error(`  [${agent.name}] Error:`, err.message);
+      if (err.cause) console.error(`  [${agent.name}] Cause:`, err.cause);
     }
     setTimeout(runAndReschedule, WAKE_INTERVAL_MS);
   };

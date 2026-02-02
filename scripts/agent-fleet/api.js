@@ -10,12 +10,32 @@ export function createApiClient(baseUrl) {
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
     const url = path.startsWith('/') ? `${apiBase}${path}` : `${apiBase}/${path}`;
-    const res = await fetch(url, {
-      method,
-      headers,
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return res.json();
+    let res;
+    try {
+      res = await fetch(url, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (err) {
+      const msg = `Request failed: ${method} ${path} — ${err.message}`;
+      console.error(`[API] ${msg}`);
+      throw new Error(msg);
+    }
+    const text = await res.text();
+    let json;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+    if (!res.ok) {
+      const errBody = json != null ? JSON.stringify(json) : text || res.statusText;
+      const msg = `API error ${res.status}: ${method} ${path} — ${String(errBody).slice(0, 300)}`;
+      console.error(`[API] ${msg}`);
+      throw new Error(msg);
+    }
+    return json;
   }
 
   return {

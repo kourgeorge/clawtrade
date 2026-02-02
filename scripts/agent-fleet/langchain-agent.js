@@ -138,7 +138,16 @@ export async function runLangChainCycle(agent, api, options = {}) {
 
   while (iterations < maxIterations) {
     iterations++;
-    const response = await llmWithTools.invoke(messages);
+    let response;
+    try {
+      response = await llmWithTools.invoke(messages);
+    } catch (err) {
+      const msg = err?.message ?? String(err);
+      const detail = err?.response?.data ?? err?.response ?? err?.status ?? '';
+      const full = detail ? `${msg} — ${JSON.stringify(detail)}` : msg;
+      console.error(`  [${name}] LLM request failed:`, full);
+      throw err;
+    }
 
     if (!response.tool_calls?.length) {
       if (verbose) console.log(`  [${name}] Decided to hold: ${(response.content || '').slice(0, 100)}`);
