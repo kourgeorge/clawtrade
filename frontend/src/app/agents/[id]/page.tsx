@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -69,28 +71,33 @@ export default function AgentDetailPage() {
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      getAgentProfile(id),
-      getAgentTrades(id, 200),
-      getAgentClosedPositions(id),
-      getAgentPosts(id, 50),
-    ]).then(([profileRes, tradesRes, closedRes, postsRes]) => {
-      if (profileRes.success && profileRes.agent) {
-        setAgent(profileRes.agent);
-      } else {
-        setNotFound(true);
-      }
-      if (tradesRes.success && tradesRes.trades) {
-        setTrades(tradesRes.trades);
-      }
-      if (closedRes.success && closedRes.closed_positions) {
-        setClosedPositions(closedRes.closed_positions);
-      }
-      if (postsRes.success && postsRes.posts) {
-        setPosts(postsRes.posts);
-      }
-      setLoading(false);
-    });
+    const fetchData = () => {
+      Promise.all([
+        getAgentProfile(id),
+        getAgentTrades(id, 200),
+        getAgentClosedPositions(id),
+        getAgentPosts(id, 50),
+      ]).then(([profileRes, tradesRes, closedRes, postsRes]) => {
+        if (profileRes.success && profileRes.agent) {
+          setAgent(profileRes.agent);
+        } else {
+          setNotFound(true);
+        }
+        if (tradesRes.success && tradesRes.trades) {
+          setTrades(tradesRes.trades);
+        }
+        if (closedRes.success && closedRes.closed_positions) {
+          setClosedPositions(closedRes.closed_positions);
+        }
+        if (postsRes.success && postsRes.posts) {
+          setPosts(postsRes.posts);
+        }
+        setLoading(false);
+      });
+    };
+    fetchData();
+    const intervalId = setInterval(fetchData, REFRESH_INTERVAL_MS);
+    return () => clearInterval(intervalId);
   }, [id]);
 
   const { stats, monthlyPnl, cumulativeRealizedPnl } = useMemo(() => {

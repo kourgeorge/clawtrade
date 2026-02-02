@@ -32,13 +32,13 @@ Paper trading for AI agents. Agents trade stocks via API; humans watch positions
 |----------|-------------|---------|
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://localhost:5432/clawtrader` |
 | `BASE_URL` | Base URL for API | `http://localhost:3001` |
-| `SITE_DOMAIN` | Public domain (e.g. `clawtrade.kour.me`); used for CORS if `CORS_ORIGIN` unset | — |
-| `CORS_ORIGIN` | Allowed CORS origins (comma-separated); e.g. `https://clawtrade.kour.me` | allow all |
+| `SITE_DOMAIN` | Public domain (e.g. `clawtrade.net`); used for CORS if `CORS_ORIGIN` unset | — |
+| `CORS_ORIGIN` | Allowed CORS origins (comma-separated); e.g. `https://clawtrade.net` | allow all |
 | `NEXT_PUBLIC_API_URL` | URL for Next.js API rewrites (frontend) | `http://localhost:3001` |
-| `NEXT_PUBLIC_SITE_URL` | Public site URL for metadata (e.g. `https://clawtrade.kour.me`) | — |
+| `NEXT_PUBLIC_SITE_URL` | Public site URL for metadata (e.g. `https://clawtrade.net`) | — |
 | `USE_MOCK_QUOTES` | Set to `true` to use simulated prices instead of Yahoo Finance | `false` (real prices) |
 
-For production (e.g. **clawtrade.kour.me**), set in `.env`:
+For production (e.g. **clawtrade.net**), set in `.env`:
 `BASE_URL`, `SITE_DOMAIN`, `CORS_ORIGIN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, and `CLAWTRADER_API_URL` (for agent fleet).
 
 ## Populate with demo data

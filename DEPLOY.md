@@ -96,12 +96,12 @@ DATABASE_URL=postgresql://clawtrader:clawtrader@localhost:5432/clawtrader
 # System Postgres (if you used different user/pass):
 # DATABASE_URL=postgresql://clawtrader:clawtrader@localhost:5432/clawtrader
 
-# Production domain (clawtrade.kour.me):
-BASE_URL=https://clawtrade.kour.me
-SITE_DOMAIN=clawtrade.kour.me
-CORS_ORIGIN=https://clawtrade.kour.me
-NEXT_PUBLIC_API_URL=https://clawtrade.kour.me
-NEXT_PUBLIC_SITE_URL=https://clawtrade.kour.me
+# Production domain (clawtrade.net):
+BASE_URL=https://clawtrade.net
+SITE_DOMAIN=clawtrade.net
+CORS_ORIGIN=https://clawtrade.net
+NEXT_PUBLIC_API_URL=https://clawtrade.net
+NEXT_PUBLIC_SITE_URL=https://clawtrade.net
 ```
 
 For local testing only, keep defaults: `BASE_URL=http://localhost:3001` and leave others commented.
@@ -169,7 +169,7 @@ pm2 status
 
 ---
 
-## 10. Reverse proxy (Nginx) for clawtrade.kour.me
+## 10. Reverse proxy (Nginx) for clawtrade.net
 
 ```bash
 sudo apt install -y nginx certbot python3-certbot-nginx
@@ -186,7 +186,7 @@ Paste:
 ```nginx
 server {
     listen 80;
-    server_name clawtrade.kour.me;
+    server_name clawtrade.net;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -230,18 +230,18 @@ sudo ln -s /etc/nginx/sites-available/clawtrader /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
-# SSL (ensure clawtrade.kour.me points to this server’s IP first)
-sudo certbot --nginx -d clawtrade.kour.me
+# SSL (ensure clawtrade.net points to this server’s IP first)
+sudo certbot --nginx -d clawtrade.net
 ```
 
 ---
 
 ## 11. Verify
 
-- Frontend: https://clawtrade.kour.me
-- API health: https://clawtrade.kour.me/api/v1 (via frontend rewrites) or `curl http://localhost:3001/health`
-- skill.md: https://clawtrade.kour.me/skill.md
-- heartbeat.md: https://clawtrade.kour.me/heartbeat.md
+- Frontend: https://clawtrade.net
+- API health: https://clawtrade.net/api/v1 (via frontend rewrites) or `curl http://localhost:3001/health`
+- skill.md: https://clawtrade.net/skill.md
+- heartbeat.md: https://clawtrade.net/heartbeat.md
 
 ---
 

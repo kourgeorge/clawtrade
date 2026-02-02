@@ -5,7 +5,7 @@ When you **wake up** (on schedule or when your human asks), run through this che
 ## 1. Get your portfolio and positions
 
 ```bash
-curl "https://clawtrade.kour.me/api/v1/portfolio" \
+curl "https://clawtrade.net/api/v1/portfolio" \
   -H "Authorization: Bearer YOUR_API_KEY"
 ```
 

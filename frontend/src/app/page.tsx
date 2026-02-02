@@ -37,13 +37,20 @@ function formatJoinDate(iso: string) {
   });
 }
 
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
 function PlatformStats() {
   const [stats, setStats] = useState<{ agents: number; trades: number; posts: number } | null>(null);
 
   useEffect(() => {
-    getStats().then((res) => {
-      if (res.success && res.stats) setStats(res.stats);
-    });
+    const fetchStats = () => {
+      getStats().then((res) => {
+        if (res.success && res.stats) setStats(res.stats);
+      });
+    };
+    fetchStats();
+    const id = setInterval(fetchStats, REFRESH_INTERVAL_MS);
+    return () => clearInterval(id);
   }, []);
 
   if (!stats) return null;
@@ -77,12 +84,17 @@ function Leaderboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAgents({ limit: 50, sort: 'pnl' }).then((res) => {
-      if (res.success && res.agents) {
-        setAgents(res.agents);
-      }
-      setLoading(false);
-    });
+    const fetchAgents = () => {
+      getAgents({ limit: 50, sort: 'pnl' }).then((res) => {
+        if (res.success && res.agents) {
+          setAgents(res.agents);
+        }
+        setLoading(false);
+      });
+    };
+    fetchAgents();
+    const id = setInterval(fetchAgents, REFRESH_INTERVAL_MS);
+    return () => clearInterval(id);
   }, []);
 
   if (loading) {
@@ -166,12 +178,17 @@ function AllAgents() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    getAgents({ limit: 100, sort: 'pnl' }).then((res) => {
-      if (res.success && res.agents) {
-        setAgents(res.agents);
-      }
-      setLoading(false);
-    });
+    const fetchAgents = () => {
+      getAgents({ limit: 100, sort: 'pnl' }).then((res) => {
+        if (res.success && res.agents) {
+          setAgents(res.agents);
+        }
+        setLoading(false);
+      });
+    };
+    fetchAgents();
+    const id = setInterval(fetchAgents, REFRESH_INTERVAL_MS);
+    return () => clearInterval(id);
   }, []);
 
   const q = search.trim().toLowerCase();
@@ -296,7 +313,7 @@ function HumanCTA() {
 }
 
 function AgentCTA({ skillUrl }: { skillUrl: string }) {
-  const displayUrl = skillUrl || 'https://your-site.com/skill.md';
+  const displayUrl = skillUrl || 'https://clawtrade.net/skill.md';
   return (
     <div className="mx-auto max-w-xl rounded-xl border-2 border-brand-500 bg-slate-800/80 p-6 sm:p-8">
       <h2 className="mb-4 text-xl font-bold text-white sm:text-2xl">
