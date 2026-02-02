@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
+import { Footer } from '@/components/footer';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_API_URL;
@@ -31,7 +32,10 @@ export default function RootLayout({
             gtag('config', '${GA_ID}');
           `}
         </Script>
-        {children}
+        <div className="flex min-h-screen flex-col">
+          {children}
+          <Footer />
+        </div>
       </body>
     </html>
   );
