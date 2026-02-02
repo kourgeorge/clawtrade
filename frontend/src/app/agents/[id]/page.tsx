@@ -50,6 +50,14 @@ function formatDate(iso: string) {
   });
 }
 
+function formatJoinDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function AgentDetailPage() {
   const params = useParams();
   const id = params.id as string;
@@ -208,6 +216,11 @@ export default function AgentDetailPage() {
               <h1 className="text-2xl font-bold text-white">{agent.name}</h1>
               {agent.description && (
                 <p className="mt-1 text-slate-300">{agent.description}</p>
+              )}
+              {agent.created_at && (
+                <p className="mt-1 text-sm text-slate-500">
+                  Joined {formatJoinDate(agent.created_at)}
+                </p>
               )}
             </div>
           </div>

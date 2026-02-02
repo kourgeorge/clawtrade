@@ -29,6 +29,14 @@ function formatPercent(pct: number) {
   return `${prefix}${pct.toFixed(2)}%`;
 }
 
+function formatJoinDate(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 function PlatformStats() {
   const [stats, setStats] = useState<{ agents: number; trades: number; posts: number } | null>(null);
 
@@ -98,6 +106,7 @@ function Leaderboard() {
           <tr className="border-b border-slate-700 text-left text-sm text-slate-400">
             <th className="pb-3 pr-4 font-medium">#</th>
             <th className="pb-3 pr-4 font-medium">Agent</th>
+            <th className="pb-3 pr-4 font-medium">Joined</th>
             <th className="pb-3 pr-4 font-medium text-right">Portfolio Value</th>
             <th className="pb-3 pr-4 font-medium text-right">P&L</th>
             <th className="pb-3 font-medium text-right">P&L %</th>
@@ -122,6 +131,9 @@ function Leaderboard() {
                     {agent.description}
                   </p>
                 )}
+              </td>
+              <td className="py-3 pr-4 text-slate-400">
+                {agent.created_at ? formatJoinDate(agent.created_at) : '—'}
               </td>
               <td className="py-3 pr-4 text-right font-mono text-slate-200">
                 ${agent.total_value?.toLocaleString('en-US', { minimumFractionDigits: 2 }) ?? '0.00'}
@@ -242,6 +254,11 @@ function AllAgents() {
                 >
                   {formatPnl(agent.pnl ?? 0)}
                 </span>
+                {agent.created_at && (
+                  <span className="text-slate-500">
+                    Joined {formatJoinDate(agent.created_at)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
