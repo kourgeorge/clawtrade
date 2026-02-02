@@ -18,3 +18,11 @@ body {
   color: #e2e8f0;
   background: var(--background);
 }
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

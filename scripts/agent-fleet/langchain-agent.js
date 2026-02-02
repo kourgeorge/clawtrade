@@ -25,7 +25,8 @@ Guidelines:
 - Provide a concise reasoning for each trade
 - You may decide to hold (place no order) if the market looks unfavorable
 - Trade conservatively - this is paper trading for learning
-- Optionally use post_thought to share market insights or reasoning on your profile (e.g., before a trade or when holding)`;
+
+You must call post_thought exactly once each turn with a short, interesting thought about your trading strategy or market view (1–2 sentences). Make it specific and trader-like: e.g. why you're holding, what you're watching, a sector view, or a brief reflection on your trade. Examples: "Staying defensive—keeping powder dry for a pullback in megacap tech." / "Adding to financials on the dip; rates narrative still supportive." / "Trimmed AAPL into strength; locking in gains and watching for re-entry."`;
 
 /**
  * Create tools bound to the API and apiKey.
@@ -48,15 +49,18 @@ function createTools(api, apiKey) {
       const symbols = input?.symbols;
       const syms = Array.isArray(symbols) && symbols.length > 0 ? symbols : null;
       const toFetch = syms ?? SYMBOLS;
-      const results = await Promise.all(
-        toFetch.map((s) => api.getQuote(apiKey, s))
-      );
       const out = {};
-      toFetch.forEach((s, i) => {
-        const r = results[i];
-        if (r?.price != null) out[s] = { price: r.price, symbol: r.symbol };
-        else out[s] = { error: 'No price' };
-      });
+      await Promise.all(
+        toFetch.map(async (s) => {
+          try {
+            const r = await api.getQuote(apiKey, s);
+            if (r?.price != null) out[s] = { price: r.price, symbol: r.symbol };
+            else out[s] = { error: 'No price' };
+          } catch (_) {
+            out[s] = { error: 'No quote found' };
+          }
+        })
+      );
       return JSON.stringify(out, null, 2);
     },
     {
@@ -97,9 +101,9 @@ function createTools(api, apiKey) {
     },
     {
       name: 'post_thought',
-      description: 'Post a thought to your profile page. Use this to share market analysis, reasoning, or insights with viewers. Keep it concise (1-3 sentences).',
+      description: 'Post a short strategic thought to your profile (required once per turn). Write 1–2 sentences: your market view, why you are holding, what you are watching, or a reflection on your trade. Be specific and interesting.',
       schema: z.object({
-        content: z.string().describe('Your thought or insight to share on your profile'),
+        content: z.string().describe('Your strategic thought or market insight (1–2 sentences, trader-like)'),
       }),
     }
   );
@@ -129,12 +133,13 @@ export async function runLangChainCycle(agent, api, options = {}) {
   const messages = [
     new SystemMessage({ content: `${SYSTEM_PROMPT}\n\nYour name: ${name}` }),
     new HumanMessage({
-      content: `Decide what to do. Check your portfolio and the market, then either place one trade (buy or sell) or hold. Be decisive.`,
+      content: `Decide what to do. Call get_portfolio and get_quotes, then either place one trade (buy or sell) or hold. You must also call post_thought once with a short, interesting strategic thought (1–2 sentences) about your view or your trade. Be decisive.`,
     }),
   ];
 
   let iterations = 0;
   const maxIterations = 10;
+  let postedThought = null;
 
   while (iterations < maxIterations) {
     iterations++;
@@ -151,7 +156,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
 
     if (!response.tool_calls?.length) {
       if (verbose) console.log(`  [${name}] Decided to hold: ${(response.content || '').slice(0, 100)}`);
-      return { agent: name, action: 'hold', reason: String(response.content || 'No trade') };
+      return { agent: name, action: 'hold', reason: String(response.content || 'No trade'), thought: postedThought };
     }
 
     let placeOrderResult = null;
@@ -182,6 +187,9 @@ export async function runLangChainCycle(agent, api, options = {}) {
           placeOrderResult = { success: false, error: 'Parse error' };
         }
       }
+      if (tc.name === 'post_thought' && args?.content) {
+        postedThought = String(args.content).trim();
+      }
 
       messages.push(
         new ToolMessage({
@@ -204,9 +212,14 @@ export async function runLangChainCycle(agent, api, options = {}) {
         reasoning: placeOrderArgs?.reasoning,
         success,
         error: placeOrderResult?.error,
+        thought: postedThought || null,
       };
+    }
+
+    if (postedThought !== null) {
+      return { agent: name, action: 'hold', reason: postedThought, thought: postedThought };
     }
   }
 
-  return { agent: name, action: 'hold', reason: 'Max iterations reached' };
+  return { agent: name, action: 'hold', reason: 'Max iterations reached', thought: null };
 }

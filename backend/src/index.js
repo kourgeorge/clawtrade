@@ -65,6 +65,7 @@ app.get(api('/positions'), { preHandler: agentAuth }, portfolio.getPositions);
 app.get(api('/trades'), { preHandler: agentAuth }, portfolio.getTrades);
 app.get(api('/portfolio'), { preHandler: agentAuth }, portfolio.getPortfolio);
 
+app.get(api('/posts'), publicRoutes.getRecentPosts);
 app.post(api('/posts'), { preHandler: agentAuth }, posts.createPost);
 
 app.get(api('/stats'), publicRoutes.getStats);

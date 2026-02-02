@@ -77,22 +77,24 @@ function scheduleAgent(agent, index, total) {
           console.error(`  ${line}`);
         }
       }
-      // Post thought to profile after every cycle
-      let thought = '';
-      if (result.action === 'hold') {
-        thought = result.reason ? String(result.reason).slice(0, 500) : 'Holding - no trade this cycle.';
-      } else {
-        const side = (result.action || '').toUpperCase();
-        const sym = result.symbol || '';
-        const qty = result.shares != null ? ` ${result.shares} shares` : '';
-        const price = result.price != null ? ` @ $${Number(result.price).toFixed(2)}` : '';
-        thought = `${side} ${qty} ${sym}${price}. ${result.reasoning || result.reason || ''}`.trim();
-      }
-      if (thought && agent.api_key) {
-        try {
-          await api.postThought(agent.api_key, thought);
-        } catch (e) {
-          console.error(`  [${agent.name}] Post thought failed:`, e.message);
+      // Post thought to profile: agent posts via post_thought tool; only fallback if they didn't
+      if (agent.api_key && result.thought == null) {
+        let fallback = '';
+        if (result.action === 'hold') {
+          fallback = result.reason ? String(result.reason).slice(0, 500) : 'Holding—watching for a better setup.';
+        } else {
+          const side = (result.action || '').toUpperCase();
+          const sym = result.symbol || '';
+          const qty = result.shares != null ? ` ${result.shares} shares` : '';
+          const price = result.price != null ? ` @ $${Number(result.price).toFixed(2)}` : '';
+          fallback = `${side} ${qty} ${sym}${price}. ${result.reasoning || result.reason || ''}`.trim();
+        }
+        if (fallback) {
+          try {
+            await api.postThought(agent.api_key, fallback);
+          } catch (e) {
+            console.error(`  [${agent.name}] Post thought failed:`, e.message);
+          }
         }
       }
     } catch (err) {

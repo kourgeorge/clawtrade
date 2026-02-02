@@ -18,7 +18,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-slate-900 text-slate-200 antialiased">
+      <body className="min-h-screen overflow-x-hidden bg-slate-900 text-slate-200 antialiased">
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"

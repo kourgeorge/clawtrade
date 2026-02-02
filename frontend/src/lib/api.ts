@@ -87,6 +87,15 @@ export type AgentPost = {
   created_at: string;
 };
 
+export type RecentPost = AgentPost & {
+  agent_name: string;
+};
+
+export async function getRecentPosts(limit?: number) {
+  const sp = limit != null ? `?limit=${limit}` : '';
+  return api<{ posts: RecentPost[] }>(`/posts${sp}`);
+}
+
 export async function getAgentPosts(id: string, limit?: number) {
   const sp = limit != null ? `?limit=${limit}` : '';
   return api<{ posts: AgentPost[] }>(`/agents/${id}/posts${sp}`);

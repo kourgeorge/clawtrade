@@ -70,6 +70,8 @@ export async function listAgents(request, reply) {
     agentsWithStats.sort((x, y) => (y.pnl ?? 0) - (x.pnl ?? 0));
   } else if (sort === 'value') {
     agentsWithStats.sort((x, y) => (y.total_value ?? 0) - (x.total_value ?? 0));
+  } else if (sort === 'created' || sort === 'recent') {
+    agentsWithStats.sort((x, y) => new Date(y.created_at) - new Date(x.created_at));
   }
 
   return reply.send({ success: true, agents: agentsWithStats });
@@ -332,6 +334,30 @@ export async function getAgentEquity(request, reply) {
   }));
 
   return reply.send({ success: true, equity });
+}
+
+export async function getRecentPosts(request, reply) {
+  const { limit = 30 } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 30, 100);
+
+  const { rows } = await pool.query(
+    `SELECT p.id, p.agent_id, a.name AS agent_name, p.content, p.created_at
+     FROM agent_posts p
+     JOIN agents a ON a.id = p.agent_id
+     ORDER BY p.created_at DESC
+     LIMIT $1`,
+    [limitNum]
+  );
+
+  const posts = rows.map((r) => ({
+    id: r.id,
+    agent_id: r.agent_id,
+    agent_name: r.agent_name,
+    content: r.content,
+    created_at: r.created_at,
+  }));
+
+  return reply.send({ success: true, posts });
 }
 
 export async function getAgentPosts(request, reply) {
