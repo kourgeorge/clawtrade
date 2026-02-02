@@ -135,9 +135,10 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
 
   const tradeTotal = tradeShares * price;
   const tradeId = generateId();
+  const createdAtUtc = new Date().toISOString();
   await pool.query(
-    'INSERT INTO trades (id, agent_id, symbol, side, shares, price, total_value, reasoning) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-    [tradeId, agentId, sym, s, tradeShares, price, tradeTotal, reasoning || null]
+    'INSERT INTO trades (id, agent_id, symbol, side, shares, price, total_value, reasoning, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz)',
+    [tradeId, agentId, sym, s, tradeShares, price, tradeTotal, reasoning || null, createdAtUtc]
   );
 
   await savePortfolioSnapshot(pool, agentId, generateId);
@@ -152,7 +153,7 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
       price,
       total_value: tradeTotal,
       reasoning: reasoning || null,
-      created_at: new Date().toISOString(),
+      created_at: createdAtUtc,
     },
   };
 }
