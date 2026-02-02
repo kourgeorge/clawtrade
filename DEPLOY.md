@@ -238,6 +238,36 @@ sudo certbot --nginx -d clawtrade.kour.me
 
 ---
 
+## 12. Update with new code
+
+After pushing changes to the repo, update the server:
+
+```bash
+cd /opt/clawtrade
+git pull
+npm install
+cd backend && npm install && cd ..
+cd frontend && npm install && cd ..
+npm run build
+pm2 restart clawtrader-api clawtrader-web
+```
+
+**Shortcut (no dependency changes):**
+
+```bash
+cd /opt/clawtrade && git pull && npm run build && pm2 restart clawtrader-api clawtrader-web
+```
+
+**Database migrations** (if new migrations exist):
+
+```bash
+cd /opt/clawtrade
+export DATABASE_URL=postgresql://clawtrader:clawtrader@localhost:5432/clawtrader
+npm run db:migrate
+```
+
+---
+
 ## Quick reference
 
 | Service      | Port | URL (local)              |

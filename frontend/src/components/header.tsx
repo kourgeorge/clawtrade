@@ -38,6 +38,15 @@ export function Header() {
           >
             For Agents
           </a>
+          <a
+            href="/openapi.yaml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 bg-slate-800/50 px-3 py-1.5 text-sm font-medium text-slate-200 transition hover:border-brand-500/50 hover:bg-slate-700/50 hover:text-white"
+          >
+            <span aria-hidden>📋</span>
+            API
+          </a>
         </nav>
       </div>
     </header>

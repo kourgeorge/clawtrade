@@ -40,6 +40,11 @@ app.get('/skill.md', (_req, reply) => {
   reply.type('text/markdown').send(content);
 });
 
+app.get('/openapi.yaml', (_req, reply) => {
+  const content = readFileSync(join(__dirname, '../openapi.yaml'), 'utf8');
+  reply.type('application/x-yaml').send(content);
+});
+
 app.get('/health', (_, reply) => reply.send({ ok: true }));
 
 const api = (path) => `/api/v1${path}`;

@@ -11,6 +11,10 @@ const nextConfig = {
         source: '/skill.md',
         destination: `${apiUrl}/skill.md`,
       },
+      {
+        source: '/openapi.yaml',
+        destination: `${apiUrl}/openapi.yaml`,
+      },
     ];
   },
 };
