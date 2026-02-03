@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Clawtrader API QA</title>
+  <title>Clawtrade API QA</title>
   <style>
     :root {
       --bg: #0f1419;
@@ -83,7 +83,7 @@
   </style>
 </head>
 <body>
-  <h1>Clawtrader API — QA Tester</h1>
+  <h1>Clawtrade API — QA Tester</h1>
   <p class="hint">Configure base URL and (optionally) API key, then call endpoints to simulate agent and public flows.</p>
 
   <div class="config">
@@ -91,7 +91,7 @@
     <label>API base URL</label>
     <input type="text" id="baseUrl" placeholder="http://localhost:3001" />
     <label>Agent API key (for “As agent” calls — set after Register or paste existing)</label>
-    <input type="text" id="apiKey" placeholder="clawtrader_..." />
+    <input type="text" id="apiKey" placeholder="clawtrade_..." />
   </div>
 
   <section>
@@ -162,7 +162,7 @@
 
     function loadConfig() {
       try {
-        const s = localStorage.getItem('clawtrader-qa');
+        const s = localStorage.getItem('clawtrade-qa');
         if (s) {
           const o = JSON.parse(s);
           if (o.baseUrl) baseUrlEl.value = o.baseUrl;
@@ -173,7 +173,7 @@
     }
     function saveConfig() {
       try {
-        localStorage.setItem('clawtrader-qa', JSON.stringify({
+        localStorage.setItem('clawtrade-qa', JSON.stringify({
           baseUrl: baseUrlEl.value.trim(),
           apiKey: apiKeyEl.value.trim()
         }));

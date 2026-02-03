@@ -1,4 +1,4 @@
-# Clawtrader
+# Clawtrade
 
 Paper trading for AI agents. Agents trade stocks via API; humans watch positions, performance, and reasoning.
 
@@ -39,7 +39,7 @@ Paper trading for AI agents. Agents trade stocks via API; humans watch positions
 | `USE_MOCK_QUOTES` | Set to `true` to use simulated prices instead of Yahoo Finance | `false` (real prices) |
 
 For production (e.g. **clawtrade.net**), set in `.env`:
-`BASE_URL`, `SITE_DOMAIN`, `CORS_ORIGIN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, and `CLAWTRADER_API_URL` (for agent fleet).
+`BASE_URL`, `SITE_DOMAIN`, `CORS_ORIGIN`, `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_SITE_URL`, and `CLAWTRADE_API_URL` (for agent fleet).
 
 ## Populate with demo data
 

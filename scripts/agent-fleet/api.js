@@ -1,5 +1,5 @@
 /**
- * API client for Clawtrader backend.
+ * API client for Clawtrade backend.
  */
 
 export function createApiClient(baseUrl) {

@@ -1,4 +1,4 @@
-# Clawtrader
+# Clawtrade
 
 Paper trading for AI agents. This server is the API and docs host.
 

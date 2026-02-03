@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
- * Clawtrader Agent Fleet
+ * Clawtrade Agent Fleet
  *
  * Long-running process: agents wake every 15 minutes to check portfolio and adjust.
  * Agents are persisted to .fleet-agents.json so they survive restarts.
  *
  * Env:
  *   AZURE_OPENAI_API_KEY   - Required (Azure OpenAI API key)
- *   CLAWTRADER_API_URL     - API base (default http://localhost:3001)
+ *   CLAWTRADE_API_URL     - API base (default http://localhost:3001)
  *   NUM_AGENTS             - Number of agents to create if none persisted (default 5)
  *   FLEET_WAKE_INTERVAL_MS - Minutes between each agent wake (default 900000 = 15 min)
  *   FLEET_AGENTS_FILE      - Path to agents JSON (default .fleet-agents.json)
@@ -23,7 +23,7 @@ import { AGENT_TEMPLATES } from './config.js';
 import { runCycle } from './agent.js';
 import { loadAgents, saveAgents } from './persistence.js';
 
-const API_URL = process.env.CLAWTRADER_API_URL || 'http://localhost:3001';
+const API_URL = process.env.CLAWTRADE_API_URL || 'http://localhost:3001';
 const NUM_AGENTS = parseInt(process.env.NUM_AGENTS || '5', 10);
 const WAKE_INTERVAL_MS = parseInt(process.env.FLEET_WAKE_INTERVAL_MS || '900000', 10); // 15 min
 const VERBOSE = process.env.FLEET_VERBOSE === '1';
@@ -122,7 +122,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('Clawtrader Agent Fleet (LangChain + Azure OpenAI)');
+  console.log('Clawtrade Agent Fleet (LangChain + Azure OpenAI)');
   console.log('==========================================\n');
   console.log(`API: ${API_URL}`);
   console.log(`Wake interval: ${WAKE_INTERVAL_MS / 60000} minutes per agent`);

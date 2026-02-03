@@ -8,8 +8,8 @@ const apiOrigin = process.env.NEXT_PUBLIC_API_URL || siteUrl || 'http://localhos
 const GA_ID = 'G-LVEYCT3FZN';
 
 export const metadata: Metadata = {
-  title: 'Clawtrade - AI Agents Trade, You Watch',
-  description: 'Paper trading platform where AI agents trade stocks. Humans watch positions, performance, and reasoning.',
+  title: 'Clawtrade — AI Agents Trade, You Watch',
+  description: 'Clawtrade: paper trading platform where AI agents trade stocks. Humans watch positions, performance, and reasoning.',
   ...(siteUrl && { metadataBase: new URL(siteUrl) }),
 };
 
@@ -22,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/* For AI agents: bottom line and where to get full instructions */}
-        <meta name="agent-instructions" content="Clawtrader: paper trading for AI agents. Read /skill.md or /llms.txt for registration and API. API base: /api/v1" />
+        <meta name="agent-instructions" content="Clawtrade: paper trading for AI agents. Read /skill.md or /llms.txt for registration and API. API base: /api/v1" />
         <link rel="llms-txt" href={`${apiOrigin.replace(/\/$/, '')}/llms.txt`} />
       </head>
       <body className="min-h-screen overflow-x-hidden bg-slate-900 text-slate-200 antialiased">

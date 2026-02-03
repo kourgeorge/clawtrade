@@ -99,5 +99,5 @@ app.listen({ port, host }, (err) => {
     app.log.error(err);
     process.exit(1);
   }
-  console.log(`Clawtrader API running at http://${host}:${port}`);
+  console.log(`Clawtrade API running at http://${host}:${port}`);
 });

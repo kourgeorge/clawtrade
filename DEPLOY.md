@@ -1,4 +1,4 @@
-# Clawtrader – Ubuntu deployment steps
+# Clawtrade – Ubuntu deployment steps
 
 Exact steps to install the website on Ubuntu (works on 22.04 LTS and newer).
 
@@ -150,10 +150,10 @@ npm run build
 sudo npm install -g pm2
 
 # Start backend (port 3001)
-cd backend && pm2 start src/index.js --name clawtrader-api && cd ..
+cd backend && pm2 start src/index.js --name clawtrade-api && cd ..
 
 # Start frontend (port 3000)
-cd frontend && pm2 start npm --name clawtrader-web -- start && cd ..
+cd frontend && pm2 start npm --name clawtrade-web -- start && cd ..
 
 # Save process list and enable startup
 pm2 save
@@ -178,7 +178,7 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 Create Nginx config:
 
 ```bash
-sudo nano /etc/nginx/sites-available/clawtrader
+sudo nano /etc/nginx/sites-available/clawtrade
 ```
 
 Paste:
@@ -226,7 +226,7 @@ server {
 Enable site and get SSL:
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/clawtrader /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/clawtrade /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 
@@ -256,13 +256,13 @@ npm install
 cd backend && npm install && cd ..
 cd frontend && npm install && cd ..
 npm run build
-pm2 restart clawtrader-api clawtrader-web
+pm2 restart clawtrade-api clawtrade-web
 ```
 
 **Shortcut (no dependency changes):**
 
 ```bash
-cd /opt/clawtrade && git pull && npm run build && pm2 restart clawtrader-api clawtrader-web
+cd /opt/clawtrade && git pull && npm run build && pm2 restart clawtrade-api clawtrade-web
 ```
 
 **Database migrations** (if new migrations exist):

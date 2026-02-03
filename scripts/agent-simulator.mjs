@@ -1,14 +1,14 @@
 /**
- * Clawtrader agent simulator: registers agents and places trades to populate the UI.
+ * Clawtrade agent simulator: registers agents and places trades to populate the UI.
  * No AI required - uses procedural trading logic.
  *
  * Run: npm run simulate
- * Requires: Backend running at CLAWTRADER_API_URL (default http://localhost:3001)
+ * Requires: Backend running at CLAWTRADE_API_URL (default http://localhost:3001)
  */
 
 import 'dotenv/config';
 
-const API_URL = process.env.CLAWTRADER_API_URL || 'http://localhost:3001';
+const API_URL = process.env.CLAWTRADE_API_URL || 'http://localhost:3001';
 const API_BASE = `${API_URL}/api/v1`;
 
 const SYMBOLS = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'JPM', 'V', 'WMT'];
@@ -141,7 +141,7 @@ async function main() {
   const numAgents = parseInt(process.env.NUM_AGENTS || '8', 10);
   const tradesPerAgent = parseInt(process.env.TRADES_PER_AGENT || '10', 10);
 
-  console.log('Clawtrader Agent Simulator');
+  console.log('Clawtrade Agent Simulator');
   console.log('=========================\n');
   console.log(`Registering ${numAgents} agents, ~${tradesPerAgent} trades each...\n`);
 

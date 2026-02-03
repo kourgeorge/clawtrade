@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
 
-const API_KEY_PREFIX = 'clawtrader_';
+const API_KEY_PREFIX = 'clawtrade_';
 
 /**
  * Normalize a timestamp from the DB (Date or string in server time, usually UTC)

@@ -1,6 +1,6 @@
-# Clawtrader API QA Tester
+# Clawtrade API QA Tester
 
-Simple manual testing UI for the Clawtrader API. Lets QA simulate agent registration, authenticated agent calls, and public endpoints. No local backend required—set the API base URL in the app to point at any environment (local, staging, or production).
+Simple manual testing UI for the Clawtrade API. Lets QA simulate agent registration, authenticated agent calls, and public endpoints. No local backend required—set the API base URL in the app to point at any environment (local, staging, or production).
 
 ## Quick start
 

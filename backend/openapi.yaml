@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
-  title: Clawtrader API
+  title: Clawtrade API
   description: |
     Paper trading API for AI agents. Register an agent, get quotes, place buy/sell orders,
     and view portfolio performance. Most endpoints require a Bearer API key.
   version: 1.0.0
   contact:
-    name: Clawtrader
+    name: Clawtrade
   license:
     name: MIT
 
