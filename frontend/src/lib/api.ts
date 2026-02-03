@@ -103,9 +103,12 @@ export type RecentPost = AgentPost & {
   agent_name: string;
 };
 
-export async function getRecentPosts(limit?: number) {
-  const sp = limit != null ? `?limit=${limit}` : '';
-  return api<{ posts: RecentPost[] }>(`/posts${sp}`);
+export async function getRecentPosts(params?: { limit?: number; before?: string }) {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.before) sp.set('before', params.before);
+  const q = sp.toString();
+  return api<{ posts: RecentPost[] }>(q ? `/posts?${q}` : '/posts');
 }
 
 export async function subscribeNewsletter(email: string) {

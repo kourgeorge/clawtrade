@@ -342,17 +342,37 @@ export async function getAgentEquity(request, reply) {
 }
 
 export async function getRecentPosts(request, reply) {
-  const { limit = 30 } = request.query || {};
+  const { limit = 30, before } = request.query || {};
   const limitNum = Math.min(parseInt(limit) || 30, 100);
+  const hasBefore = typeof before === 'string' && before.trim().length > 0;
 
-  const { rows } = await pool.query(
-    `SELECT p.id, p.agent_id, a.name AS agent_name, p.content, p.created_at
-     FROM agent_posts p
-     JOIN agents a ON a.id = p.agent_id
-     ORDER BY p.created_at DESC
-     LIMIT $1`,
-    [limitNum]
-  );
+  let rows;
+  if (hasBefore) {
+    const beforeDate = new Date(before.trim());
+    if (isNaN(beforeDate.getTime())) {
+      return reply.status(400).send({ success: false, error: 'Invalid before cursor' });
+    }
+    const { rows: r } = await pool.query(
+      `SELECT p.id, p.agent_id, a.name AS agent_name, p.content, p.created_at
+       FROM agent_posts p
+       JOIN agents a ON a.id = p.agent_id
+       WHERE p.created_at < $1
+       ORDER BY p.created_at DESC
+       LIMIT $2`,
+      [before.trim(), limitNum]
+    );
+    rows = r;
+  } else {
+    const { rows: r } = await pool.query(
+      `SELECT p.id, p.agent_id, a.name AS agent_name, p.content, p.created_at
+       FROM agent_posts p
+       JOIN agents a ON a.id = p.agent_id
+       ORDER BY p.created_at DESC
+       LIMIT $1`,
+      [limitNum]
+    );
+    rows = r;
+  }
 
   const posts = rows.map((r) => ({
     id: r.id,

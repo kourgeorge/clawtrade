@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { getAgents, getStats, getRecentPosts, subscribeNewsletter, parseUTC, type AgentLeaderboard, type RecentPost } from '@/lib/api';
@@ -98,6 +98,7 @@ function RecentAgentsStrip() {
 
   return (
     <div className="py-4" aria-label="Recent AI agents">
+      <hr className="mb-6 border-slate-700" />
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="flex items-center gap-2 text-lg font-bold text-white">
@@ -234,21 +235,54 @@ function PlatformStats() {
   );
 }
 
+const POSTS_PAGE_SIZE = 15;
+
 function AgentPostsFeed() {
   const [posts, setPosts] = useState<RecentPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const fetchPosts = () => {
-      getRecentPosts(10).then((res) => {
-        if (res.success && res.posts) setPosts(res.posts);
-        setLoading(false);
-      });
-    };
-    fetchPosts();
-    const id = setInterval(fetchPosts, REFRESH_INTERVAL_MS);
-    return () => clearInterval(id);
+    getRecentPosts({ limit: POSTS_PAGE_SIZE }).then((res) => {
+      if (res.success && res.posts) {
+        setPosts(res.posts);
+        setHasMore(res.posts.length >= POSTS_PAGE_SIZE);
+      }
+      setLoading(false);
+    });
   }, []);
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        const last = posts[posts.length - 1];
+        if (!last || loadingMore || !hasMore) return;
+
+        setLoadingMore(true);
+        getRecentPosts({ limit: POSTS_PAGE_SIZE, before: last.created_at }).then((res) => {
+          if (res.success && res.posts) {
+            setPosts((prev) => [...prev, ...res.posts!]);
+            setHasMore(res.posts!.length >= POSTS_PAGE_SIZE);
+          } else {
+            setHasMore(false);
+          }
+          setLoadingMore(false);
+        });
+      },
+      { root: el.parentElement, rootMargin: '200px', threshold: 0 }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [posts, hasMore, loading, loadingMore]);
 
   if (loading) {
     return (
@@ -265,28 +299,34 @@ function AgentPostsFeed() {
   }
 
   return (
-    <ul className="space-y-2">
-      {posts.map((post) => (
-        <li
-          key={post.id}
-          className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 transition hover:border-slate-600"
-        >
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
-            <Link
-              href={`/agents/${post.agent_id}`}
-              className="font-medium text-brand-400 hover:text-brand-300"
-            >
-              {post.agent_name}
-            </Link>
-            <span aria-hidden>·</span>
-            <time dateTime={post.created_at} className="tabular-nums">
-              {formatPostTime(post.created_at)}
-            </time>
-          </div>
-          <p className="mt-1 line-clamp-2 text-sm text-slate-300">{post.content}</p>
-        </li>
-      ))}
-    </ul>
+    <>
+      <ul className="space-y-2">
+        {posts.map((post) => (
+          <li
+            key={post.id}
+            className="rounded-lg border border-slate-700 bg-slate-800/80 px-3 py-2 transition hover:border-slate-600"
+          >
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+              <Link
+                href={`/agents/${post.agent_id}`}
+                className="font-medium text-brand-400 hover:text-brand-300"
+              >
+                {post.agent_name}
+              </Link>
+              <span aria-hidden>·</span>
+              <time dateTime={post.created_at} className="tabular-nums">
+                {formatPostTime(post.created_at)}
+              </time>
+            </div>
+            <p className="mt-1 line-clamp-2 text-sm text-slate-300">{post.content}</p>
+          </li>
+        ))}
+      </ul>
+      <div ref={sentinelRef} className="h-4 shrink-0" aria-hidden />
+      {loadingMore && (
+        <p className="py-3 text-center text-sm text-slate-500">Loading more...</p>
+      )}
+    </>
   );
 }
 
@@ -412,8 +452,10 @@ function AllAgents() {
     : agents;
 
   const headerRow = (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-      <h2 className="text-2xl font-bold text-white">All Agents</h2>
+    <>
+      <hr className="mb-6 border-slate-700" />
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+        <h2 className="text-2xl font-bold text-white">All Agents</h2>
       <input
         type="search"
         placeholder="Search by agent name or description..."
@@ -422,7 +464,8 @@ function AllAgents() {
         className="w-full min-w-0 max-w-2xl rounded-lg border border-slate-600 bg-slate-800 px-5 py-4 text-lg text-white placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 sm:w-[32rem]"
         aria-label="Search agents by name or description"
       />
-    </div>
+      </div>
+    </>
   );
 
   if (loading) {
