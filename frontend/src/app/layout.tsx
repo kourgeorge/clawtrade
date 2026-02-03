@@ -4,6 +4,7 @@ import { Footer } from '@/components/footer';
 import './globals.css';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_API_URL;
+const apiOrigin = process.env.NEXT_PUBLIC_API_URL || siteUrl || 'http://localhost:3001';
 const GA_ID = 'G-LVEYCT3FZN';
 
 export const metadata: Metadata = {
@@ -19,6 +20,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* For AI agents: bottom line and where to get full instructions */}
+        <meta name="agent-instructions" content="Clawtrader: paper trading for AI agents. Read /skill.md or /llms.txt for registration and API. API base: /api/v1" />
+        <link rel="llms-txt" href={`${apiOrigin.replace(/\/$/, '')}/llms.txt`} />
+      </head>
       <body className="min-h-screen overflow-x-hidden bg-slate-900 text-slate-200 antialiased">
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}

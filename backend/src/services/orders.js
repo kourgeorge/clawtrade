@@ -56,7 +56,9 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
 
   const quote = await getQuote(sym);
   if (quote.error) return { success: false, error: quote.error };
-  const price = parseFloat(quote.price);
+  // Paper trading: fill buys at ask, sells at bid (fallback to mid price when bid/ask missing)
+  const executionPrice =
+    s === 'buy' ? parseFloat(quote.ask) : parseFloat(quote.bid);
 
   let tradeShares;
   if (shares != null) {
@@ -66,7 +68,7 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
     if (!Number.isFinite(amt) || amt <= 0) {
       return { success: false, error: 'amount must be a positive number' };
     }
-    tradeShares = Math.floor((amt / price) * 10000) / 10000;
+    tradeShares = Math.floor((amt / executionPrice) * 10000) / 10000;
   } else {
     return { success: false, error: 'shares or amount is required' };
   }
@@ -79,7 +81,7 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
   const cashBalance = parseFloat(portfolio.cash_balance);
 
   if (s === 'buy') {
-    const cost = tradeShares * price;
+    const cost = tradeShares * executionPrice;
     if (cost > cashBalance) {
       return { success: false, error: 'Insufficient cash', required: cost, available: cashBalance };
     }
@@ -96,13 +98,13 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
       const id = generateId();
       await pool.query(
         'INSERT INTO positions (id, agent_id, symbol, shares, avg_cost) VALUES ($1, $2, $3, $4, $5)',
-        [id, agentId, sym, tradeShares, price]
+        [id, agentId, sym, tradeShares, executionPrice]
       );
     } else {
       const oldShares = parseFloat(pos[0].shares);
       const oldCost = parseFloat(pos[0].avg_cost);
       const newShares = oldShares + tradeShares;
-      const newAvgCost = (oldShares * oldCost + tradeShares * price) / newShares;
+      const newAvgCost = (oldShares * oldCost + tradeShares * executionPrice) / newShares;
       await pool.query(
         'UPDATE positions SET shares = $1, avg_cost = $2, updated_at = NOW() WHERE agent_id = $3 AND symbol = $4',
         [newShares, newAvgCost, agentId, sym]
@@ -117,7 +119,7 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
       return { success: false, error: 'Insufficient shares to sell', symbol: sym };
     }
     const currentShares = parseFloat(pos[0].shares);
-    const proceeds = tradeShares * price;
+    const proceeds = tradeShares * executionPrice;
     await pool.query(
       'UPDATE portfolios SET cash_balance = cash_balance + $1, updated_at = NOW() WHERE agent_id = $2',
       [proceeds, agentId]
@@ -134,12 +136,12 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
     }
   }
 
-  const tradeTotal = tradeShares * price;
+  const tradeTotal = tradeShares * executionPrice;
   const tradeId = generateId();
   const createdAtUtc = new Date().toISOString();
   await pool.query(
     'INSERT INTO trades (id, agent_id, symbol, side, shares, price, total_value, reasoning, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz)',
-    [tradeId, agentId, sym, s, tradeShares, price, tradeTotal, reasoning || null, createdAtUtc]
+    [tradeId, agentId, sym, s, tradeShares, executionPrice, tradeTotal, reasoning || null, createdAtUtc]
   );
 
   await savePortfolioSnapshot(pool, agentId, generateId);
@@ -151,7 +153,7 @@ export async function placeOrder(agentId, { symbol, side, shares, amount, reason
       symbol: sym,
       side: s,
       shares: tradeShares,
-      price,
+      price: executionPrice,
       total_value: tradeTotal,
       reasoning: reasoning || null,
       created_at: createdAtUtc,

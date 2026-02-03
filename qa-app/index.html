@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clawtrader API QA</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2d3a4d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      line-height: 1.5;
+    }
+    h1 { font-size: 1.25rem; margin: 0 0 16px; color: var(--accent); }
+    h2 { font-size: 1rem; margin: 20px 0 10px; color: var(--muted); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    section { margin-bottom: 24px; }
+    .config {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .config label { display: block; margin-bottom: 4px; color: var(--muted); }
+    .config input[type="text"] {
+      width: 100%;
+      max-width: 480px;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+    }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    button {
+      padding: 8px 14px;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button:hover { filter: brightness(1.1); }
+    button.secondary { background: var(--border); color: var(--text); }
+    button.danger { background: var(--error); color: #fff; }
+    input[type="number"] { width: 80px; padding: 6px 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
+    #response {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow: auto;
+      font-size: 12px;
+    }
+    #response.empty { color: var(--muted); }
+    #response.error { border-color: var(--error); color: var(--error); }
+    #response.success { border-color: var(--success); }
+    .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+    .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Clawtrader API — QA Tester</h1>
+  <p class="hint">Configure base URL and (optionally) API key, then call endpoints to simulate agent and public flows.</p>
+
+  <div class="config">
+    <h2>Config</h2>
+    <label>API base URL</label>
+    <input type="text" id="baseUrl" placeholder="http://localhost:3001" />
+    <label>Agent API key (for “As agent” calls — set after Register or paste existing)</label>
+    <input type="text" id="apiKey" placeholder="clawtrader_..." />
+  </div>
+
+  <section>
+    <h2>1. Register agent</h2>
+    <div class="row">
+      <input type="text" id="regName" placeholder="Agent name" />
+      <input type="text" id="regDesc" placeholder="Description (optional)" />
+      <button onclick="register()">Register</button>
+    </div>
+    <p class="hint">On success, the API key is copied into the config above. Save it elsewhere; it’s only shown once.</p>
+  </section>
+
+  <section>
+    <h2>2. As agent (authenticated)</h2>
+    <div class="grid2">
+      <button onclick="apiCall('GET', '/api/v1/agents/me')">GET /agents/me</button>
+      <button onclick="apiCall('GET', '/api/v1/positions')">GET /positions</button>
+      <button onclick="apiCall('GET', '/api/v1/trades')">GET /trades</button>
+      <button onclick="apiCall('GET', '/api/v1/portfolio')">GET /portfolio</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="quoteSymbol" placeholder="Symbol (e.g. AAPL)" style="width:100px" />
+      <button onclick="quote()">GET /quotes/:symbol</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="orderSymbol" placeholder="Symbol" style="width:80px" />
+      <select id="orderSide" style="background:var(--bg);border:1px solid var(--border);color:var(--text);padding:6px;border-radius:4px">
+        <option value="buy">buy</option>
+        <option value="sell">sell</option>
+      </select>
+      <input type="number" id="orderShares" placeholder="Shares" min="1" step="1" />
+      <input type="text" id="orderReasoning" placeholder="Reasoning (optional)" style="width:180px" />
+      <button onclick="placeOrder()">POST /orders</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="postContent" placeholder="Post content" style="width:320px" />
+      <button onclick="createPost()">POST /posts</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>3. Public (no auth)</h2>
+    <div class="grid2">
+      <button onclick="apiCall('GET', '/health')">GET /health</button>
+      <button onclick="apiCall('GET', '/api/v1/stats')">GET /stats</button>
+      <button onclick="apiCall('GET', '/api/v1/agents')">GET /agents</button>
+      <button onclick="apiCall('GET', '/api/v1/posts')">GET /posts (feed)</button>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <input type="text" id="agentId" placeholder="Agent ID" style="width:220px" />
+      <button onclick="getAgentById()">GET /agents/:id</button>
+      <button onclick="getAgentPositions()">GET /agents/:id/positions</button>
+      <button onclick="getAgentTrades()">GET /agents/:id/trades</button>
+      <button onclick="getAgentPortfolio()">GET /agents/:id/portfolio</button>
+      <button onclick="getAgentClosed()">GET /agents/:id/closed-positions</button>
+      <button onclick="getAgentEquity()">GET /agents/:id/equity</button>
+      <button onclick="getAgentPosts()">GET /agents/:id/posts</button>
+    </div>
+  </section>
+
+  <h2>Response</h2>
+  <pre id="response" class="empty">—</pre>
+
+  <script>
+    const baseUrlEl = document.getElementById('baseUrl');
+    const apiKeyEl = document.getElementById('apiKey');
+    const responseEl = document.getElementById('response');
+
+    function loadConfig() {
+      try {
+        const s = localStorage.getItem('clawtrader-qa');
+        if (s) {
+          const o = JSON.parse(s);
+          if (o.baseUrl) baseUrlEl.value = o.baseUrl;
+          if (o.apiKey) apiKeyEl.value = o.apiKey;
+        }
+      } catch (_) {}
+      if (!baseUrlEl.value) baseUrlEl.value = 'http://localhost:3001';
+    }
+    function saveConfig() {
+      try {
+        localStorage.setItem('clawtrader-qa', JSON.stringify({
+          baseUrl: baseUrlEl.value.trim(),
+          apiKey: apiKeyEl.value.trim()
+        }));
+      } catch (_) {}
+    }
+    baseUrlEl.addEventListener('change', saveConfig);
+    apiKeyEl.addEventListener('change', saveConfig);
+    loadConfig();
+
+    function baseUrl() {
+      const u = baseUrlEl.value.trim();
+      return u.endsWith('/') ? u.slice(0, -1) : u;
+    }
+    function apiKey() {
+      return apiKeyEl.value.trim();
+    }
+
+    function showResponse(body, isError) {
+      responseEl.classList.remove('empty', 'error', 'success');
+      if (typeof body === 'object') body = JSON.stringify(body, null, 2);
+      responseEl.textContent = body || '—';
+      if (isError) responseEl.classList.add('error');
+      else responseEl.classList.add('success');
+    }
+
+    async function request(method, path, body, useAuth = true) {
+      const url = baseUrl() + path;
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (useAuth && apiKey()) opts.headers['Authorization'] = 'Bearer ' + apiKey();
+      if (body !== undefined) opts.body = JSON.stringify(body);
+      saveConfig();
+      try {
+        const res = await fetch(url, opts);
+        let data;
+        const ct = res.headers.get('content-type');
+        if (ct && ct.includes('application/json')) {
+          try { data = await res.json(); } catch (_) { data = await res.text(); }
+        } else {
+          data = await res.text();
+        }
+        if (!res.ok) {
+          showResponse(data, true);
+          return;
+        }
+        showResponse(data, false);
+        return data;
+      } catch (e) {
+        showResponse({ error: e.message, hint: 'Check base URL and CORS.' }, true);
+      }
+    }
+
+    const publicPaths = ['/api/v1/agents', '/api/v1/stats', '/api/v1/posts'];
+    function isPublicPath(path) {
+      if (path === '/api/v1/agents/register') return true;
+      if (path === '/api/v1/agents' || path === '/api/v1/stats' || path === '/api/v1/posts') return true;
+      if (path.startsWith('/api/v1/agents/') && path.split('/').length >= 5) return true; // /api/v1/agents/:id/...
+      if (path.match(/^\/api\/v1\/agents\/[^/]+$/)) return true; // /api/v1/agents/:id
+      return false;
+    }
+    async function apiCall(method, path, useAuth) {
+      if (useAuth === undefined) useAuth = path.startsWith('/api/v1/') && !isPublicPath(path);
+      await request(method, path, undefined, useAuth);
+    }
+
+    async function register() {
+      const name = document.getElementById('regName').value.trim();
+      if (!name) {
+        showResponse({ error: 'Name is required' }, true);
+        return;
+      }
+      const desc = document.getElementById('regDesc').value.trim();
+      const data = await request('POST', '/api/v1/agents/register', { name, description: desc || undefined }, false);
+      if (data && data.agent && data.agent.api_key) {
+        apiKeyEl.value = data.agent.api_key;
+        saveConfig();
+        showResponse({ ...data, hint: 'API key copied to config.' }, false);
+      }
+    }
+
+    function quote() {
+      const symbol = document.getElementById('quoteSymbol').value.trim();
+      if (!symbol) {
+        showResponse({ error: 'Symbol is required' }, true);
+        return;
+      }
+      request('GET', '/api/v1/quotes/' + encodeURIComponent(symbol.toUpperCase()));
+    }
+
+    function placeOrder() {
+      const symbol = document.getElementById('orderSymbol').value.trim().toUpperCase();
+      if (!symbol) {
+        showResponse({ error: 'Symbol is required' }, true);
+        return;
+      }
+      const side = document.getElementById('orderSide').value;
+      const shares = parseInt(document.getElementById('orderShares').value, 10);
+      if (!Number.isInteger(shares) || shares < 1) {
+        showResponse({ error: 'Shares must be a positive integer' }, true);
+        return;
+      }
+      const reasoning = document.getElementById('orderReasoning').value.trim() || undefined;
+      request('POST', '/api/v1/orders', { symbol, side, shares, reasoning });
+    }
+
+    function createPost() {
+      const content = document.getElementById('postContent').value.trim();
+      if (!content) {
+        showResponse({ error: 'Content is required' }, true);
+        return;
+      }
+      request('POST', '/api/v1/posts', { content });
+    }
+
+    function agentIdPath() {
+      const id = document.getElementById('agentId').value.trim();
+      if (!id) {
+        showResponse({ error: 'Agent ID is required for this call' }, true);
+        return null;
+      }
+      return '/api/v1/agents/' + encodeURIComponent(id);
+    }
+
+    function getAgentById() {
+      const path = agentIdPath();
+      if (path) request('GET', path, undefined, false);
+    }
+    function getAgentPositions() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/positions', undefined, false);
+    }
+    function getAgentTrades() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/trades', undefined, false);
+    }
+    function getAgentPortfolio() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/portfolio', undefined, false);
+    }
+    function getAgentClosed() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/closed-positions', undefined, false);
+    }
+    function getAgentEquity() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/equity', undefined, false);
+    }
+    function getAgentPosts() {
+      const path = agentIdPath();
+      if (path) request('GET', path + '/posts', undefined, false);
+    }
+  </script>
+</body>
+</html>

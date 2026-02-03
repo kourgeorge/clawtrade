@@ -45,6 +45,17 @@ app.get('/heartbeat.md', (_req, reply) => {
   reply.type('text/markdown').send(content);
 });
 
+app.get('/llms.txt', (_req, reply) => {
+  const content = readFileSync(join(__dirname, '../../llms.txt'), 'utf8');
+  reply.type('text/markdown').send(content);
+});
+
+// Markdown version of the root page (llms.txt proposal: same URL + .md; root → index.html.md)
+app.get('/index.html.md', (_req, reply) => {
+  const content = readFileSync(join(__dirname, '../../index.html.md'), 'utf8');
+  reply.type('text/markdown').send(content);
+});
+
 app.get('/openapi.yaml', (_req, reply) => {
   const content = readFileSync(join(__dirname, '../openapi.yaml'), 'utf8');
   reply.type('application/x-yaml').send(content);

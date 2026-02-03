@@ -8,7 +8,7 @@ import YahooFinance from 'yahoo-finance2';
 
 const yahooFinance = new YahooFinance({ suppressNotices: ['yahooSurvey'] });
 
-const CACHE_TTL_MS = 60_000; // 1 minute
+const CACHE_TTL_MS = 30_000; // 30 sec
 const quoteCache = new Map();
 
 function getCached(sym) {
@@ -50,12 +50,20 @@ export async function getQuote(symbol) {
       return { error: `Invalid price for ${sym}` };
     }
 
+    const numPrice = Number(price);
+    const validBid =
+      quote.bid != null && Number.isFinite(quote.bid) && quote.bid > 0 ? Number(quote.bid) : null;
+    const validAsk =
+      quote.ask != null && Number.isFinite(quote.ask) && quote.ask > 0 ? Number(quote.ask) : null;
+
     const ts = quote.regularMarketTime ?? new Date();
     const timestamp = ts instanceof Date ? ts.toISOString() : new Date(ts).toISOString();
 
     const result = {
       symbol: sym,
-      price: Number(price),
+      price: numPrice,
+      bid: validBid ?? numPrice,
+      ask: validAsk ?? numPrice,
       timestamp,
     };
     setCached(sym, result);
