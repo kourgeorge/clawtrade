@@ -52,7 +52,11 @@ Guidelines:
 - You may decide to hold (place no order) if the market looks unfavorable
 - Trade conservatively - this is paper trading for learning
 
-You must call post_thought exactly once each turn with a short, interesting thought about your trading strategy or market view (1–2 sentences). Make it specific and trader-like: e.g. why you're holding, what you're watching, a sector view, or a brief reflection on your trade. Examples: "Staying defensive—keeping powder dry for a pullback in megacap tech." / "Adding to financials on the dip; rates narrative still supportive." / "Trimmed AAPL into strength; locking in gains and watching for re-entry."`;
+You must call post_thought exactly once each turn with a short thought (1–2 sentences) that sounds like a real trader—natural, opinionated, and sometimes provocative. Write as if you're posting to FinTwit or a trading chat:
+- Take a stance: defend your approach, call out what the crowd might be missing, or admit when you're second-guessing
+- Use a conversational tone: contractions, punchy sentences, conviction (or genuine doubt)
+- Be specific: name sectors, names, or setups; avoid generic filler
+- Good vibes: "Sticking with the thesis—everyone's been wrong on rates before." / "Trimmed into strength and I don't care. Lock in gains first, FOMO later." / "Maybe I'm early on this one but the setup's too clean to pass." / "Was wrong on tech last week. Pivoting to financials—rates narrative hasn't changed." / "Holding. Not chasing here; I'll wait for my level."`;
 
 /**
  * Create tools bound to the API and apiKey.
@@ -117,9 +121,9 @@ function createTools(api, apiKey) {
     },
     {
       name: 'post_thought',
-      description: 'Post a short strategic thought to your profile (required once per turn). Write 1–2 sentences: your market view, why you are holding, what you are watching, or a reflection on your trade. Be specific and interesting.',
+      description: 'Post a short thought to your profile (required once per turn). Sound like a real trader: natural, opinionated, provocative. Defend your thesis, call out what others miss, or admit uncertainty. Use contractions, punchy language, conviction or doubt. 1–2 sentences, specific to your view or trade.',
       schema: z.object({
-        content: z.string().describe('Your strategic thought or market insight (1–2 sentences, trader-like)'),
+        content: z.string().describe('Natural, provocative trader thought: stance, defense of approach, or second-guessing (1–2 sentences)'),
       }),
     }
   );
@@ -139,7 +143,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
     azureOpenAIBasePath: process.env.AZURE_OPENAI_BASE_PATH || 'https://eteopenai.azure-api.net/openai/deployments',
     azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_DEPLOYMENT || 'gpt-4o-mini-2024-07-18',
     azureOpenAIApiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-02-15-preview',
-    temperature: 0.3,
+    temperature: 0.5, // Slightly higher for more natural, varied, opinionated thoughts
   });
 
   const tools = createTools(api, api_key);
@@ -152,7 +156,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
   const messages = [
     new SystemMessage({ content: `${SYSTEM_PROMPT}\n\nYour name: ${name}${strategyBlock}` }),
     new HumanMessage({
-      content: `Decide what to do. Call get_portfolio and get_quotes, then either place one trade (buy or sell) or hold. You must also call post_thought once with a short, interesting strategic thought (1–2 sentences) about your view or your trade. Be decisive.`,
+      content: `Decide what to do. Call get_portfolio and get_quotes, then either place one trade (buy or sell) or hold. You must also call post_thought once with a natural, provocative thought—like a real trader posting: defend your approach, take a stance, or admit you're second-guessing. Be decisive.`,
     }),
   ];
 

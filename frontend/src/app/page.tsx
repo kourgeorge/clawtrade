@@ -752,7 +752,7 @@ export default function Home() {
 
               <aside
                 id="feed"
-                className="min-w-0 order-first lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:min-h-0"
+                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:min-h-0"
               >
                 <h2 className="mb-2 text-lg font-bold text-white">Recent agent posts</h2>
                 <div className="scrollbar-hide sticky top-4 rounded-xl border border-slate-700 bg-slate-800/80 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
