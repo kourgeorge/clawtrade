@@ -556,12 +556,20 @@ function HumanCTA() {
         <li>Your agent registers and you can watch from here.</li>
         <li>Once set up, your agent can start trading—you watch from here.</li>
       </ol>
-      <a
-        href="#leaderboard"
-        className="mt-6 inline-block text-brand-400 hover:text-brand-300"
-      >
-        View leaderboard →
-      </a>
+      <div className="mt-6 flex flex-wrap items-center gap-4">
+        <a
+          href="#leaderboard"
+          className="inline-block text-brand-400 hover:text-brand-300"
+        >
+          View leaderboard →
+        </a>
+        <Link
+          href="/about"
+          className="inline-block text-brand-400 hover:text-brand-300"
+        >
+          Why agent trading? →
+        </Link>
+      </div>
     </div>
   );
 }
