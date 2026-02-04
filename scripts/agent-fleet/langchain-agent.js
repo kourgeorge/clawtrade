@@ -1,7 +1,7 @@
 /**
  * LangChain AI trading agent.
  * Uses OpenAI to reason about positions, market state, and decide what to do.
- * Tools: get_portfolio, get_quotes, place_order
+ * Tools: get_portfolio, get_quotes, get_news (Yahoo Finance), place_order
  */
 
 import { tool } from '@langchain/core/tools';
@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { AzureChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage, ToolMessage } from '@langchain/core/messages';
 import { SYMBOLS, CORE_SYMBOLS } from './config.js';
+import { getNewsForSymbols } from './yahoo-news.js';
 
 /** Throttle quote fetches to avoid Yahoo rate limits. Batch size and delay between batches. */
 const QUOTE_BATCH_SIZE = 8;
@@ -41,10 +42,12 @@ const SYSTEM_PROMPT = `You are a paper trading AI agent. You have a portfolio wi
 1. YOUR POSITIONS: Your current holdings (symbol, shares, avg_cost, current value)
 2. MARKET STATE: Current prices from get_quotes
 3. CASH: Available cash for buying
+4. NEWS (optional): Use get_news to fetch recent Yahoo Finance headlines for symbols you hold or are evaluating—helps inform thesis and timing.
 
 Guidelines:
 - Use get_portfolio first to see your cash and positions
 - Use get_quotes with only the symbols you hold or are evaluating (e.g. your positions + a few candidates)—avoid fetching every symbol
+- Optionally use get_news for a small set of symbols (e.g. your top positions or candidates) to factor recent headlines into your decision
 - Consider: diversification, position sizing (don't put >10% in one stock), risk
 - For sells: only sell if you hold the symbol; consider profit/loss vs avg_cost
 - For buys: ensure you have enough cash (shares * price <= cash)
@@ -56,12 +59,14 @@ You must call post_thought exactly once each turn with a short thought (1–2 se
 - Take a stance: defend your approach, call out what the crowd might be missing, or admit when you're second-guessing
 - Use a conversational tone: contractions, punchy sentences, conviction (or genuine doubt)
 - Be specific: name sectors, names, or setups; avoid generic filler
+- When you used get_news: your thought must reference the news—mention a headline, theme, or what the news made you do (e.g. "That AAPL downgrade headline had me trimming into the open." / "Nothing in the MSFT news changes the cloud thesis; adding on the dip.")
 - Good vibes: "Sticking with the thesis—everyone's been wrong on rates before." / "Trimmed into strength and I don't care. Lock in gains first, FOMO later." / "Maybe I'm early on this one but the setup's too clean to pass." / "Was wrong on tech last week. Pivoting to financials—rates narrative hasn't changed." / "Holding. Not chasing here; I'll wait for my level."`;
 
 /**
- * Create tools bound to the API and apiKey.
+ * Create tools bound to the API, apiKey, and agent name (for console logging).
  */
-function createTools(api, apiKey) {
+function createTools(api, apiKey, agentName) {
+  const logPrefix = agentName ? `[${agentName}] ` : '';
   const getPortfolio = tool(
     async () => {
       const portfolio = await api.getPortfolio(apiKey);
@@ -88,6 +93,34 @@ function createTools(api, apiKey) {
       description: 'Get current stock prices. Prefer passing only symbols you hold or are considering, e.g. ["AAPL","SPY","QQQ"]. Pass null for a core set of liquid indices and majors.',
       schema: z.object({
         symbols: z.array(z.string()).nullable().describe('Symbols to fetch, e.g. ["AAPL","MSFT","SPY"]. Pass null for core set only.'),
+      }),
+    }
+  );
+
+  const getNews = tool(
+    async ({ symbols }) => {
+      const list = Array.isArray(symbols) && symbols.length > 0 ? symbols : [];
+      const limited = list.slice(0, 5);
+      const out = await getNewsForSymbols(limited);
+      for (const [sym, data] of Object.entries(out)) {
+        if (data.error) {
+          console.log(`${logPrefix}[News] ${sym}: error — ${data.error}`);
+        } else if (data.news?.length) {
+          console.log(`${logPrefix}[News] ${sym}:`);
+          data.news.forEach((n, i) => {
+            console.log(`${logPrefix}  ${i + 1}. ${n.title || '(no title)'} (${n.publisher || '?'})`);
+          });
+        } else {
+          console.log(`${logPrefix}[News] ${sym}: no articles`);
+        }
+      }
+      return JSON.stringify(out, null, 2);
+    },
+    {
+      name: 'get_news',
+      description: 'Get recent stock-related news headlines from Yahoo Finance for the given symbols. Use for symbols you hold or are evaluating. Pass a small list (e.g. 1–5 symbols) to avoid rate limits.',
+      schema: z.object({
+        symbols: z.array(z.string()).describe('Symbols to fetch news for, e.g. ["AAPL","MSFT"]. Prefer 1–5 symbols.'),
       }),
     }
   );
@@ -121,14 +154,14 @@ function createTools(api, apiKey) {
     },
     {
       name: 'post_thought',
-      description: 'Post a short thought to your profile (required once per turn). Sound like a real trader: natural, opinionated, provocative. Defend your thesis, call out what others miss, or admit uncertainty. Use contractions, punchy language, conviction or doubt. 1–2 sentences, specific to your view or trade.',
+      description: 'Post a short thought to your profile (required once per turn). Sound like a real trader: natural, opinionated, provocative. Defend your thesis, call out what others miss, or admit uncertainty. If you called get_news, your thought must reference the news—mention a headline, theme, or how the news influenced your move. Use contractions, punchy language, conviction or doubt. 1–2 sentences, specific to your view, trade, or news.',
       schema: z.object({
-        content: z.string().describe('Natural, provocative trader thought: stance, defense of approach, or second-guessing (1–2 sentences)'),
+        content: z.string().describe('Natural, provocative trader thought: stance, defense of approach, or second-guessing. When you used get_news, reference the news (headline/theme) in this thought. 1–2 sentences.'),
       }),
     }
   );
 
-  return [getPortfolio, getQuotes, placeOrder, postThought];
+  return [getPortfolio, getQuotes, getNews, placeOrder, postThought];
 }
 
 /**
@@ -146,7 +179,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
     temperature: 0.5, // Slightly higher for more natural, varied, opinionated thoughts
   });
 
-  const tools = createTools(api, api_key);
+  const tools = createTools(api, api_key, name);
   const toolMap = Object.fromEntries(tools.map((t) => [t.name, t]));
   const llmWithTools = llm.bindTools(tools);
 
@@ -156,7 +189,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
   const messages = [
     new SystemMessage({ content: `${SYSTEM_PROMPT}\n\nYour name: ${name}${strategyBlock}` }),
     new HumanMessage({
-      content: `Decide what to do. Call get_portfolio and get_quotes, then either place one trade (buy or sell) or hold. You must also call post_thought once with a natural, provocative thought—like a real trader posting: defend your approach, take a stance, or admit you're second-guessing. Be decisive.`,
+      content: `Decide what to do. Call get_portfolio and get_quotes; optionally call get_news for symbols you care about. Then either place one trade (buy or sell) or hold. You must also call post_thought once: if you used get_news, your thought must talk about the news (headlines, themes, or how it influenced you); otherwise defend your approach, take a stance, or admit second-guessing. Be decisive.`,
     }),
   ];
 
