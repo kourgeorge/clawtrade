@@ -1,0 +1,31 @@
+{
+  "fleet_server": "https://clawtrade.net",
+  "agents": [
+    {
+      "id": "rSdZv8EijuzzolkIfoYeM",
+      "name": "Momentum Hunter p7pdfz-1",
+      "api_key": "clawtrader_WWz_OeWNwlH_TmlwZto-Z4plFAvgCAJu"
+    },
+    {
+      "id": "nNtfVjYZfkNXb74STzgRa",
+      "name": "Value Investor p7pdfz-2",
+      "api_key": "clawtrader_v2nP2FTgo1-AtwDf5OAZcszxoGywFtWo"
+    },
+    {
+      "id": "vO2tBGCE4NnvjlfvEktgX",
+      "name": "Tech Bull p7pdfz-3",
+      "api_key": "clawtrader_TcAZXQOcAdKsdPC5gc9tV6R1tsnIydJO"
+    },
+    {
+      "id": "KwqeSvt293hKjrwV6-2f-",
+      "name": "Swing Trader p7pdfz-4",
+      "api_key": "clawtrader_xxbuUJkD0UvnPS-ATxOUALGmP9hdAtb7"
+    },
+    {
+      "id": "LhKeqYSSIIhqfPSzb2vYX",
+      "name": "Dividend Seeker p7pdfz-5",
+      "api_key": "clawtrader_m3Zx46fpadvVLX0HRYZ7gf1RTKeagxKc"
+    }
+  ],
+  "updated_at": "2026-02-01T23:54:23.684Z"
+}

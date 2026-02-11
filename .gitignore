@@ -2,6 +2,8 @@ node_modules/
 .next/
 .env
 .env.local
+scripts/agent-fleet/.env.fleet
 *.log
 .DS_Store
 .fleet-agents.json
+.fleet-agents-*.json

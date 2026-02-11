@@ -1,34 +1,41 @@
 #!/usr/bin/env node
 /**
- * Clawtrade Agent Fleet
+ * Clawtrade Agent Fleet (stress testing / load)
  *
- * Long-running process: agents wake every 15 minutes to check portfolio and adjust.
- * Agents are persisted to .fleet-agents.json so they survive restarts.
+ * Long-running process: agents wake periodically to check portfolio and adjust.
+ * Not part of the core app — uses its own env file so app config stays separate.
  *
- * Env:
+ * Env: loaded from scripts/agent-fleet/.env.fleet (copy from .env.fleet.example in this dir).
  *   AZURE_OPENAI_API_KEY   - Required (Azure OpenAI API key)
- *   CLAWTRADE_API_URL     - API base (default https://clawtrade.net)
+ *   CLAWTRADE_API_URL      - API base (default https://clawtrade.net)
  *   NUM_AGENTS             - Number of agents to create if none persisted (default 5)
- *   FLEET_WAKE_INTERVAL_MS - Minutes between each agent wake (default 900000 = 15 min)
- *   FLEET_AGENTS_FILE      - Path to agents JSON (default .fleet-agents.json)
+ *   FLEET_WAKE_INTERVAL_MS - Ms between each agent wake (default 900000 = 15 min)
+ *   (target server = CLAWTRADE_API_URL; agents file derived from it, e.g. .fleet-agents-localhost.json)
+ *   FLEET_AGENTS_FILE      - Override path to agents JSON (optional)
  *   FLEET_VERBOSE          - "1" to log each trade
  *
  * Run: npm run fleet
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+config({ path: join(__dirname, '.env.fleet') });
 
 import { createApiClient } from './api.js';
 import { AGENT_TEMPLATES } from './config.js';
 import { runCycle } from './agent.js';
-import { loadAgents, saveAgents } from './persistence.js';
+import { loadAgents, saveAgents, getAgentsPath, getFleetServerId } from './persistence.js';
 
-const API_URL = process.env.CLAWTRADE_API_URL || 'https://clawtrade.net';
+const DEFAULT_API_URL = process.env.CLAWTRADE_API_URL || 'https://clawtrade.net';
 const NUM_AGENTS = parseInt(process.env.NUM_AGENTS || '5', 10);
 const WAKE_INTERVAL_MS = parseInt(process.env.FLEET_WAKE_INTERVAL_MS || '900000', 10); // 15 min
 const VERBOSE = process.env.FLEET_VERBOSE === '1';
 
-const api = createApiClient(API_URL);
+let API_URL = DEFAULT_API_URL;
+let api = createApiClient(API_URL);
 
 function uniqueSuffix() {
   return Math.random().toString(36).slice(2, 8);
@@ -56,16 +63,35 @@ function enrichAgentsWithDescription(agents) {
   });
 }
 
+function setApiFromUrl(url) {
+  API_URL = url;
+  api = createApiClient(API_URL);
+}
+
 async function ensureAgents() {
-  let agents = await loadAgents();
-  if (agents && agents.length > 0) {
-    console.log(`  Loaded ${agents.length} persisted agents`);
-    agents = enrichAgentsWithDescription(agents);
+  const { fleet_server: fileFleetServer, agents: loadedAgents } = await loadAgents();
+
+  const envUrl = process.env.CLAWTRADE_API_URL;
+  if (envUrl && envUrl.trim() !== '') {
+    setApiFromUrl(envUrl.trim());
+  } else if (fileFleetServer) {
+    setApiFromUrl(fileFleetServer);
+  } else {
+    setApiFromUrl(DEFAULT_API_URL);
+  }
+
+  if (loadedAgents && loadedAgents.length > 0) {
+    const source = envUrl ? 'CLAWTRADE_API_URL' : `${getFleetServerId()} file`;
+    console.log(`  Fleet server: ${API_URL} (from ${source})`);
+    console.log(`  Loaded ${loadedAgents.length} persisted agents`);
+    const agents = enrichAgentsWithDescription(loadedAgents);
     return agents;
   }
-  agents = await registerFleet(NUM_AGENTS);
-  await saveAgents(agents);
-  console.log(`  Saved agents to ${process.env.FLEET_AGENTS_FILE || '.fleet-agents.json'}`);
+
+  console.log(`  Fleet server: ${API_URL} (no persisted agents for ${getFleetServerId()})`);
+  const agents = await registerFleet(NUM_AGENTS);
+  await saveAgents(agents, API_URL);
+  console.log(`  Saved agents to ${getAgentsPath()}`);
   return agents;
 }
 
@@ -124,7 +150,8 @@ async function main() {
 
   console.log('Clawtrade Agent Fleet (LangChain + Azure OpenAI)');
   console.log('==========================================\n');
-  console.log(`API: ${API_URL}`);
+  console.log(`Fleet server id: ${getFleetServerId()}`);
+  console.log(`Agents file: ${getAgentsPath()}`);
   console.log(`Wake interval: ${WAKE_INTERVAL_MS / 60000} minutes per agent`);
   console.log('');
 

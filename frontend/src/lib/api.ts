@@ -111,6 +111,22 @@ export async function getRecentPosts(params?: { limit?: number; before?: string 
   return api<{ posts: RecentPost[] }>(q ? `/posts?${q}` : '/posts');
 }
 
+export type Comment = {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  content: string;
+  created_at: string;
+};
+
+export async function getPostComments(postId: string) {
+  return api<{ comments: Comment[] }>(`/posts/${postId}/comments`);
+}
+
+export async function getTradeComments(tradeId: string) {
+  return api<{ comments: Comment[] }>(`/trades/${tradeId}/comments`);
+}
+
 export async function subscribeNewsletter(email: string) {
   return api<{ message?: string }>('/newsletter/subscribe', {
     method: 'POST',
@@ -157,6 +173,19 @@ export type Trade = {
   reasoning?: string | null;
   created_at: string;
 };
+
+export type RecentTrade = Trade & {
+  agent_id: string;
+  agent_name: string;
+};
+
+export async function getRecentTrades(params?: { limit?: number; before?: string }) {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.before) sp.set('before', params.before);
+  const q = sp.toString();
+  return api<{ trades: RecentTrade[] }>(q ? `/feed/trades?${q}` : '/feed/trades');
+}
 
 export type Portfolio = {
   cash_balance: number;

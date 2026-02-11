@@ -15,7 +15,7 @@
     "db:migrate": "cd backend && npm run db:migrate",
     "db:drop": "cd backend && npm run db:drop",
     "db:reset": "cd backend && npm run db:reset",
-    "simulate": "node scripts/agent-simulator.mjs",
+    "simulate": "node scripts/agent-fleet/agent-simulator.mjs",
     "fleet": "node scripts/agent-fleet/index.mjs",
     "order": "node scripts/place-order.mjs",
     "qa": "npx serve qa-app -p 3333"

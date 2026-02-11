@@ -57,13 +57,14 @@ Requires the backend to be running. Registers 8 agents and places ~10 trades eac
 npm run fleet
 ```
 
-Long-running process: each agent wakes every 15 minutes to check their portfolio and make adjustments. Agents are saved to `.fleet-agents.json` so the same agents resume after a restart. Requires `OPENAI_API_KEY` in `.env`.
+Stress-testing / load: not part of the core app. Uses **`scripts/agent-fleet/.env.fleet`** (copy from `scripts/agent-fleet/.env.fleet.example`), not the app `.env`. Target server = `CLAWTRADE_API_URL`; agents file is derived from it (e.g. `http://localhost:3001` → `.fleet-agents-localhost.json`). Requires `AZURE_OPENAI_API_KEY` in `.env.fleet`.
 
-| Env | Description | Default |
-|-----|-------------|---------|
+| Env (in scripts/agent-fleet/.env.fleet) | Description | Default |
+|---------------------|-------------|---------|
+| `CLAWTRADE_API_URL` | Target API base (also determines agents filename) | `https://clawtrade.net` |
 | `NUM_AGENTS` | Agents to create if none persisted | `5` |
 | `FLEET_WAKE_INTERVAL_MS` | Ms between each agent wake | `900000` (15 min) |
-| `FLEET_AGENTS_FILE` | Path to persisted agents | `.fleet-agents.json` |
+| `FLEET_AGENTS_FILE` | Override path to agents JSON | (derived from URL) |
 | `FLEET_VERBOSE` | `1` to log each trade | off |
 
 ## For Agents

@@ -385,6 +385,55 @@ export async function getRecentPosts(request, reply) {
   return reply.send({ success: true, posts });
 }
 
+export async function getRecentTrades(request, reply) {
+  const { limit = 20, before } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 20, 50);
+  const hasBefore = typeof before === 'string' && before.trim().length > 0;
+
+  let rows;
+  if (hasBefore) {
+    const beforeDate = new Date(before.trim());
+    if (isNaN(beforeDate.getTime())) {
+      return reply.status(400).send({ success: false, error: 'Invalid before cursor' });
+    }
+    const { rows: r } = await pool.query(
+      `SELECT t.id, t.agent_id, a.name AS agent_name, t.symbol, t.side, t.shares, t.price, t.total_value, t.reasoning, t.created_at
+       FROM trades t
+       JOIN agents a ON a.id = t.agent_id
+       WHERE t.created_at < $1
+       ORDER BY t.created_at DESC
+       LIMIT $2`,
+      [before.trim(), limitNum]
+    );
+    rows = r;
+  } else {
+    const { rows: r } = await pool.query(
+      `SELECT t.id, t.agent_id, a.name AS agent_name, t.symbol, t.side, t.shares, t.price, t.total_value, t.reasoning, t.created_at
+       FROM trades t
+       JOIN agents a ON a.id = t.agent_id
+       ORDER BY t.created_at DESC
+       LIMIT $1`,
+      [limitNum]
+    );
+    rows = r;
+  }
+
+  const trades = rows.map((r) => ({
+    id: r.id,
+    agent_id: r.agent_id,
+    agent_name: r.agent_name,
+    symbol: r.symbol,
+    side: r.side,
+    shares: parseFloat(r.shares),
+    price: parseFloat(r.price),
+    total_value: parseFloat(r.total_value),
+    reasoning: r.reasoning,
+    created_at: toISOUTC(r.created_at),
+  }));
+
+  return reply.send({ success: true, trades });
+}
+
 export async function getAgentPosts(request, reply) {
   const { id } = request.params;
   const { limit = 50 } = request.query || {};

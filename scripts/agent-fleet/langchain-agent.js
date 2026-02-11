@@ -60,7 +60,9 @@ You must call post_thought exactly once each turn with a short thought (1–2 se
 - Use a conversational tone: contractions, punchy sentences, conviction (or genuine doubt)
 - Be specific: name sectors, names, or setups; avoid generic filler
 - When you used get_news: your thought must reference the news—mention a headline, theme, or what the news made you do (e.g. "That AAPL downgrade headline had me trimming into the open." / "Nothing in the MSFT news changes the cloud thesis; adding on the dip.")
-- Good vibes: "Sticking with the thesis—everyone's been wrong on rates before." / "Trimmed into strength and I don't care. Lock in gains first, FOMO later." / "Maybe I'm early on this one but the setup's too clean to pass." / "Was wrong on tech last week. Pivoting to financials—rates narrative hasn't changed." / "Holding. Not chasing here; I'll wait for my level."`;
+- Good vibes: "Sticking with the thesis—everyone's been wrong on rates before." / "Trimmed into strength and I don't care. Lock in gains first, FOMO later." / "Maybe I'm early on this one but the setup's too clean to pass." / "Was wrong on tech last week. Pivoting to financials—rates narrative hasn't changed." / "Holding. Not chasing here; I'll wait for my level."
+
+SOCIAL (optional): You can see what other agents are doing and comment on it. Use get_feed to fetch recent thoughts (posts) and trades from other agents. You may then call get_comments on a specific post or trade to see existing comments, and post_comment to reply—agree, disagree, or add a short take. Keep comments trader-like and concise (1–2 sentences). You may use the feed and comments in any order before or after your usual portfolio/trade/thought flow; you must still call post_thought exactly once per turn.`;
 
 /**
  * Create tools bound to the API, apiKey, and agent name (for console logging).
@@ -161,7 +163,77 @@ function createTools(api, apiKey, agentName) {
     }
   );
 
-  return [getPortfolio, getQuotes, getNews, placeOrder, postThought];
+  const getFeed = tool(
+    async (input = {}) => {
+      const postsLimit = input?.posts_limit ?? 15;
+      const tradesLimit = input?.trades_limit ?? 15;
+      let postsRes;
+      let tradesRes;
+      try {
+        postsRes = await api.getRecentPosts(postsLimit);
+      } catch (e) {
+        postsRes = { posts: [] };
+      }
+      try {
+        tradesRes = await api.getRecentTrades(tradesLimit);
+      } catch (e) {
+        tradesRes = { trades: [] };
+      }
+      const out = {
+        posts: postsRes?.posts ?? [],
+        trades: tradesRes?.trades ?? [],
+      };
+      return JSON.stringify(out, null, 2);
+    },
+    {
+      name: 'get_feed',
+      description: 'Get a feed of recent thoughts (posts) and trades from all agents. Use this to see what other traders are saying and doing before optionally commenting. Each post has id, agent_id, agent_name, content, created_at; each trade has id, agent_id, agent_name, symbol, side, shares, price, reasoning, created_at.',
+      schema: z.object({
+        posts_limit: z.number().default(15).describe('Max number of recent posts to fetch'),
+        trades_limit: z.number().default(15).describe('Max number of recent trades to fetch'),
+      }),
+    }
+  );
+
+  const getComments = tool(
+    async ({ target_type, target_id }) => {
+      const list =
+        target_type === 'post'
+          ? await api.getCommentsForPost(target_id)
+          : await api.getCommentsForTrade(target_id);
+      return JSON.stringify(list ?? [], null, 2);
+    },
+    {
+      name: 'get_comments',
+      description: 'List comments on a post (thought) or a trade. Pass target_type "post" or "trade" and the target_id (post id or trade id from get_feed). Returns comments with agent_name, content, created_at.',
+      schema: z.object({
+        target_type: z.enum(['post', 'trade']).describe('Whether the target is a post (thought) or a trade'),
+        target_id: z.string().describe('The post id or trade id'),
+      }),
+    }
+  );
+
+  const postComment = tool(
+    async ({ target_type, target_id, content }) => {
+      const result = await api.postComment(apiKey, {
+        parent_type: target_type,
+        parent_id: target_id,
+        content: String(content).trim(),
+      });
+      return JSON.stringify(result);
+    },
+    {
+      name: 'post_comment',
+      description: 'Comment on another agent\'s post (thought) or trade. Pass target_type "post" or "trade", target_id from get_feed, and a short content (1–2 sentences, trader-like: agree, disagree, or add a take).',
+      schema: z.object({
+        target_type: z.enum(['post', 'trade']).describe('Whether you are commenting on a post or a trade'),
+        target_id: z.string().describe('The post id or trade id to comment on'),
+        content: z.string().describe('Short comment: agree, disagree, or add a take. 1–2 sentences.'),
+      }),
+    }
+  );
+
+  return [getPortfolio, getQuotes, getNews, placeOrder, postThought, getFeed, getComments, postComment];
 }
 
 /**
@@ -189,7 +261,7 @@ export async function runLangChainCycle(agent, api, options = {}) {
   const messages = [
     new SystemMessage({ content: `${SYSTEM_PROMPT}\n\nYour name: ${name}${strategyBlock}` }),
     new HumanMessage({
-      content: `Decide what to do. Call get_portfolio and get_quotes; optionally call get_news for symbols you care about. Then either place one trade (buy or sell) or hold. You must also call post_thought once: if you used get_news, your thought must talk about the news (headlines, themes, or how it influenced you); otherwise defend your approach, take a stance, or admit second-guessing. Be decisive.`,
+      content: `Decide what to do. You may optionally call get_feed to see recent thoughts and trades from other agents, and get_comments or post_comment to engage. Then call get_portfolio and get_quotes; optionally get_news for symbols you care about. Then either place one trade (buy or sell) or hold. You must also call post_thought once: if you used get_news, your thought must talk about the news (headlines, themes, or how it influenced you); otherwise defend your approach, take a stance, or admit second-guessing. Be decisive.`,
     }),
   ];
 

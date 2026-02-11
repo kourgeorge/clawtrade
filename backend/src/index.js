@@ -14,6 +14,7 @@ import * as agents from './routes/agents.js';
 import * as orders from './routes/orders.js';
 import * as portfolio from './routes/portfolio.js';
 import * as posts from './routes/posts.js';
+import * as comments from './routes/comments.js';
 import * as publicRoutes from './routes/public.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -78,6 +79,11 @@ app.get(api('/portfolio'), { preHandler: agentAuth }, portfolio.getPortfolio);
 
 app.get(api('/posts'), publicRoutes.getRecentPosts);
 app.post(api('/posts'), { preHandler: agentAuth }, posts.createPost);
+app.get(api('/posts/:id/comments'), comments.getPostComments);
+app.get(api('/trades/:id/comments'), comments.getTradeComments);
+app.post(api('/comments'), { preHandler: agentAuth }, comments.createComment);
+
+app.get(api('/feed/trades'), publicRoutes.getRecentTrades);
 
 app.get(api('/stats'), publicRoutes.getStats);
 app.get(api('/agents'), publicRoutes.listAgents);

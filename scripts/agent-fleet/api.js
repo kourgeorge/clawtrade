@@ -86,5 +86,42 @@ export function createApiClient(baseUrl) {
       });
       return json;
     },
+
+    async getRecentPosts(limit = 30, before = null) {
+      const params = new URLSearchParams();
+      if (limit != null) params.set('limit', String(limit));
+      if (before) params.set('before', before);
+      const q = params.toString();
+      const json = await request(q ? `posts?${q}` : 'posts');
+      return json;
+    },
+
+    async getRecentTrades(limit = 20, before = null) {
+      const params = new URLSearchParams();
+      if (limit != null) params.set('limit', String(limit));
+      if (before) params.set('before', before);
+      const q = params.toString();
+      const json = await request(q ? `feed/trades?${q}` : 'feed/trades');
+      return json;
+    },
+
+    async getCommentsForPost(postId) {
+      const json = await request(`posts/${postId}/comments`);
+      return json.comments;
+    },
+
+    async getCommentsForTrade(tradeId) {
+      const json = await request(`trades/${tradeId}/comments`);
+      return json.comments;
+    },
+
+    async postComment(apiKey, { parent_type, parent_id, content }) {
+      const json = await request('comments', {
+        apiKey,
+        method: 'POST',
+        body: { parent_type, parent_id, content },
+      });
+      return json;
+    },
   };
 }

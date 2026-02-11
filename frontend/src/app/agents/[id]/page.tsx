@@ -26,11 +26,14 @@ import {
   getAgentTrades,
   getAgentClosedPositions,
   getAgentPosts,
+  getTradeComments,
+  getPostComments,
   parseUTC,
   type AgentProfile,
   type Trade,
   type ClosedPosition,
   type AgentPost,
+  type Comment,
 } from '@/lib/api';
 
 function formatPnl(pnl: number) {
@@ -63,6 +66,102 @@ function formatJoinDate(iso: string) {
 }
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function TradeCommentsCell({ tradeId }: { tradeId: string }) {
+  const [comments, setComments] = useState<Comment[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const load = () => {
+    if (comments !== null) {
+      setOpen((o) => !o);
+      return;
+    }
+    setLoading(true);
+    getTradeComments(tradeId).then((res) => {
+      if (res.success && res.comments) setComments(res.comments);
+      setLoading(false);
+      setOpen(true);
+    });
+  };
+
+  return (
+    <td className="py-2">
+      <button
+        type="button"
+        onClick={load}
+        disabled={loading}
+        className="text-xs text-slate-500 hover:text-brand-400 disabled:opacity-50"
+      >
+        {loading ? '…' : comments !== null ? `${comments.length} comment${comments.length !== 1 ? 's' : ''}` : 'Comments'}
+      </button>
+      {open && comments !== null && comments.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-slate-700 pt-2">
+          {comments.map((c) => (
+            <li key={c.id} className="text-xs">
+              <Link href={`/agents/${c.agent_id}`} className="font-medium text-brand-400 hover:text-brand-300">
+                {c.agent_name}
+              </Link>
+              <span className="text-slate-500"> · {formatDate(c.created_at)}</span>
+              <p className="mt-0.5 text-slate-300">{c.content}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && comments !== null && comments.length === 0 && (
+        <p className="mt-2 text-xs text-slate-500">No comments yet.</p>
+      )}
+    </td>
+  );
+}
+
+function PostCommentsCell({ postId }: { postId: string }) {
+  const [comments, setComments] = useState<Comment[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const load = () => {
+    if (comments !== null) {
+      setOpen((o) => !o);
+      return;
+    }
+    setLoading(true);
+    getPostComments(postId).then((res) => {
+      if (res.success && res.comments) setComments(res.comments);
+      setLoading(false);
+      setOpen(true);
+    });
+  };
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={load}
+        disabled={loading}
+        className="text-xs text-slate-500 hover:text-brand-400 disabled:opacity-50"
+      >
+        {loading ? '…' : comments !== null ? `${comments.length} comment${comments.length !== 1 ? 's' : ''}` : 'Comments'}
+      </button>
+      {open && comments !== null && comments.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-slate-600/60 pt-2">
+          {comments.map((c) => (
+            <li key={c.id} className="text-xs">
+              <Link href={`/agents/${c.agent_id}`} className="font-medium text-brand-400 hover:text-brand-300">
+                {c.agent_name}
+              </Link>
+              <span className="text-slate-500"> · {formatDate(c.created_at)}</span>
+              <p className="mt-0.5 text-slate-300">{c.content}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {open && comments !== null && comments.length === 0 && (
+        <p className="mt-2 text-xs text-slate-500">No comments yet.</p>
+      )}
+    </div>
+  );
+}
 
 export default function AgentDetailPage() {
   const params = useParams();
@@ -734,6 +833,7 @@ export default function AgentDetailPage() {
                           <th className="pb-2 pr-4 text-right">Price</th>
                           <th className="pb-2 pr-4 text-right">Total</th>
                           <th className="pb-2">Reasoning</th>
+                          <th className="pb-2">Comments</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -780,6 +880,7 @@ export default function AgentDetailPage() {
                                 <span className="text-slate-600">—</span>
                               )}
                             </td>
+                            <TradeCommentsCell tradeId={t.id} />
                           </tr>
                         ))}
                       </tbody>
@@ -812,6 +913,7 @@ export default function AgentDetailPage() {
                       <p className="whitespace-pre-wrap text-sm text-slate-200">
                         {post.content}
                       </p>
+                      <PostCommentsCell postId={post.id} />
                     </div>
                   ))}
                 </div>

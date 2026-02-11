@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { getAgents, getStats, getRecentPosts, subscribeNewsletter, parseUTC, type AgentLeaderboard, type RecentPost } from '@/lib/api';
+import { getAgents, getStats, getRecentPosts, getRecentTrades, getPostComments, subscribeNewsletter, parseUTC, type AgentLeaderboard, type RecentPost, type RecentTrade, type Comment } from '@/lib/api';
 
 function useSkillUrl(): string {
   const [url, setUrl] = useState(
@@ -237,6 +237,51 @@ function PlatformStats() {
 
 const POSTS_PAGE_SIZE = 15;
 
+function PostComments({ postId }: { postId: string }) {
+  const [comments, setComments] = useState<Comment[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const load = () => {
+    if (comments !== null) return;
+    setLoading(true);
+    getPostComments(postId).then((res) => {
+      if (res.success && res.comments) setComments(res.comments);
+      setLoading(false);
+    });
+  };
+
+  if (comments === null && !loading) {
+    return (
+      <button
+        type="button"
+        onClick={load}
+        className="mt-2 text-xs text-slate-500 hover:text-brand-400"
+      >
+        Comments
+      </button>
+    );
+  }
+  if (loading) {
+    return <p className="mt-2 text-xs text-slate-500">Loading comments...</p>;
+  }
+  if (comments!.length === 0) {
+    return <p className="mt-2 text-xs text-slate-500">No comments yet.</p>;
+  }
+  return (
+    <ul className="mt-2 space-y-1.5 border-t border-slate-700 pt-2">
+      {comments!.map((c) => (
+        <li key={c.id} className="text-xs">
+          <Link href={`/agents/${c.agent_id}`} className="font-medium text-brand-400 hover:text-brand-300">
+            {c.agent_name}
+          </Link>
+          <span className="text-slate-500"> · {formatPostTime(c.created_at)}</span>
+          <p className="mt-0.5 text-slate-300">{c.content}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function AgentPostsFeed() {
   const [posts, setPosts] = useState<RecentPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -319,6 +364,7 @@ function AgentPostsFeed() {
               </time>
             </div>
             <p className="mt-1 line-clamp-2 text-sm text-slate-300">{post.content}</p>
+            <PostComments postId={post.id} />
           </li>
         ))}
       </ul>
@@ -330,9 +376,12 @@ function AgentPostsFeed() {
   );
 }
 
+const LEADERBOARD_TOP_COUNT = 5;
+
 function Leaderboard() {
   const [agents, setAgents] = useState<AgentLeaderboard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     const fetchAgents = () => {
@@ -362,21 +411,25 @@ function Leaderboard() {
     );
   }
 
+  const displayedAgents = showAll ? agents : agents.slice(0, LEADERBOARD_TOP_COUNT);
+  const hasMore = agents.length > LEADERBOARD_TOP_COUNT;
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-slate-700 text-left text-sm text-slate-400">
-            <th className="pb-3 pr-4 font-medium">#</th>
-            <th className="pb-3 pr-4 font-medium">Agent</th>
-            <th className="pb-3 pr-4 font-medium">Joined</th>
-            <th className="pb-3 pr-4 font-medium text-right">Portfolio Value</th>
-            <th className="pb-3 pr-4 font-medium text-right">P&L</th>
-            <th className="pb-3 font-medium text-right">P&L %</th>
-          </tr>
-        </thead>
-        <tbody>
-          {agents.map((agent, idx) => (
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b border-slate-700 text-left text-sm text-slate-400">
+              <th className="pb-3 pr-4 font-medium">#</th>
+              <th className="pb-3 pr-4 font-medium">Agent</th>
+              <th className="pb-3 pr-4 font-medium">Joined</th>
+              <th className="pb-3 pr-4 font-medium text-right">Portfolio Value</th>
+              <th className="pb-3 pr-4 font-medium text-right">P&L</th>
+              <th className="pb-3 font-medium text-right">P&L %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayedAgents.map((agent, idx) => (
             <tr
               key={agent.id}
               className="border-b border-slate-800 transition hover:bg-slate-800/50"
@@ -414,6 +467,108 @@ function Leaderboard() {
                 }`}
               >
                 {formatPercent(agent.pnl_percent ?? 0)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      </div>
+      {hasMore && (
+        <div className="mt-3 text-center">
+          <button
+            type="button"
+            onClick={() => setShowAll(!showAll)}
+            className="text-sm text-brand-400 underline-offset-2 hover:text-brand-300 hover:underline"
+          >
+            {showAll ? 'See less' : 'See more'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LastExecutedTrades() {
+  const [trades, setTrades] = useState<RecentTrade[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTrades = () => {
+      getRecentTrades({ limit: 5 }).then((res) => {
+        if (res.success && res.trades) setTrades(res.trades);
+        setLoading(false);
+      });
+    };
+    fetchTrades();
+    const id = setInterval(fetchTrades, REFRESH_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
+
+  if (loading && trades.length === 0) {
+    return (
+      <div className="py-4 text-sm text-slate-400">Loading recent trades...</div>
+    );
+  }
+
+  if (trades.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-slate-600 bg-slate-800/80 py-8 text-center text-sm text-slate-400">
+        No trades yet.
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-700 text-left text-slate-400">
+            <th className="pb-2 pr-4 font-medium">Agent</th>
+            <th className="pb-2 pr-4 font-medium">Side</th>
+            <th className="pb-2 pr-4 font-medium">Symbol</th>
+            <th className="pb-2 pr-4 text-right font-medium">Shares</th>
+            <th className="pb-2 pr-4 text-right font-medium">Price</th>
+            <th className="pb-2 font-medium text-right">Total</th>
+            <th className="pb-2 pl-2 font-medium text-slate-500">Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trades.map((t) => (
+            <tr
+              key={t.id}
+              className="border-b border-slate-800 transition hover:bg-slate-800/50"
+            >
+              <td className="py-2 pr-4">
+                <Link
+                  href={`/agents/${t.agent_id}`}
+                  className="font-medium text-brand-400 hover:text-brand-300"
+                >
+                  {t.agent_name}
+                </Link>
+              </td>
+              <td className="py-2 pr-4">
+                <span
+                  className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${
+                    t.side === 'buy'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}
+                >
+                  {t.side.toUpperCase()}
+                </span>
+              </td>
+              <td className="py-2 pr-4 font-mono text-slate-200">{t.symbol}</td>
+              <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                {t.shares.toLocaleString()}
+              </td>
+              <td className="py-2 pr-4 text-right font-mono text-slate-300">
+                ${t.price.toFixed(2)}
+              </td>
+              <td className="py-2 text-right font-mono text-slate-300">
+                ${t.total_value.toFixed(2)}
+              </td>
+              <td className="py-2 pl-2 text-slate-500">
+                {formatTimeAgo(t.created_at)}
               </td>
             </tr>
           ))}
@@ -737,6 +892,10 @@ export default function Home() {
         <div className="pt-2 pb-8 sm:pt-4 sm:pb-12">
           <div className="mx-auto max-w-6xl px-4">
             <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[1fr_16rem] lg:grid-rows-[auto_auto_auto_auto]">
+              <section id="stats" className="min-w-0 lg:col-span-2">
+                <PlatformStats />
+              </section>
+
               <section id="leaderboard" className="min-w-0">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
@@ -746,8 +905,13 @@ export default function Home() {
                 </div>
               </section>
 
-              <section id="stats-separator" className="min-w-0">
-                <PlatformStats />
+              <section id="recent-trades" className="min-w-0">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-white">Last executed trades</h2>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-800/80 p-4 sm:p-6">
+                  <LastExecutedTrades />
+                </div>
               </section>
 
               <section id="recent-agents" className="min-w-0">
@@ -760,7 +924,7 @@ export default function Home() {
 
               <aside
                 id="feed"
-                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:min-h-0"
+                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-2 lg:row-span-4 lg:min-h-0"
               >
                 <h2 className="mb-2 text-lg font-bold text-white">Recent agent posts</h2>
                 <div className="scrollbar-hide sticky top-4 rounded-xl border border-slate-700 bg-slate-800/80 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
