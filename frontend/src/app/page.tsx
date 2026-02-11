@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
-import { getAgents, getStats, getRecentPosts, getRecentTrades, getPostComments, subscribeNewsletter, parseUTC, type AgentLeaderboard, type RecentPost, type RecentTrade, type Comment } from '@/lib/api';
+import { getAgents, getStats, getRecentPosts, getRecentTrades, getPostComments, parseUTC, type AgentLeaderboard, type RecentPost, type RecentTrade, type Comment } from '@/lib/api';
 
 function useSkillUrl(): string {
   const [url, setUrl] = useState(
@@ -500,21 +500,65 @@ function Leaderboard() {
   );
 }
 
+const TRADES_INITIAL = 5;
+const TRADES_PAGE_SIZE = 10;
+
 function LastExecutedTrades() {
   const [trades, setTrades] = useState<RecentTrade[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLTableRowElement>(null);
+  const tradesCountRef = useRef(0);
+  tradesCountRef.current = trades.length;
+
+  const fetchInitial = () => {
+    getRecentTrades({ limit: TRADES_INITIAL }).then((res) => {
+      if (res.success && res.trades) {
+        setTrades(res.trades);
+        setHasMore(res.trades.length === TRADES_INITIAL);
+      }
+      setLoading(false);
+    });
+  };
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore || trades.length === 0) return;
+    const last = trades[trades.length - 1];
+    setLoadingMore(true);
+    getRecentTrades({ limit: TRADES_PAGE_SIZE, before: last.created_at }).then(
+      (res) => {
+        if (res.success && res.trades) {
+          setTrades((prev) => [...prev, ...res.trades!]);
+          setHasMore(res.trades!.length === TRADES_PAGE_SIZE);
+        }
+        setLoadingMore(false);
+      }
+    );
+  };
 
   useEffect(() => {
-    const fetchTrades = () => {
-      getRecentTrades({ limit: 5 }).then((res) => {
-        if (res.success && res.trades) setTrades(res.trades);
-        setLoading(false);
-      });
-    };
-    fetchTrades();
-    const id = setInterval(fetchTrades, REFRESH_INTERVAL_MS);
+    fetchInitial();
+    const id = setInterval(() => {
+      if (tradesCountRef.current <= TRADES_INITIAL) fetchInitial();
+    }, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    const root = scrollRef.current;
+    if (!el || !root || !hasMore || loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { root, rootMargin: '100px', threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, trades.length]);
 
   if (loading && trades.length === 0) {
     return (
@@ -531,9 +575,12 @@ function LastExecutedTrades() {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div
+      ref={scrollRef}
+      className="scrollbar-hide max-h-[min(400px,50vh)] overflow-y-auto overflow-x-auto"
+    >
       <table className="w-full text-sm">
-        <thead>
+        <thead className="sticky top-0 z-10 bg-slate-800/95 backdrop-blur">
           <tr className="border-b border-slate-700 text-left text-slate-400">
             <th className="pb-2 pr-4 font-medium">Agent</th>
             <th className="pb-2 pr-4 font-medium">Side</th>
@@ -584,30 +631,81 @@ function LastExecutedTrades() {
               </td>
             </tr>
           ))}
+          {hasMore && (
+            <tr ref={loadMoreRef} className="border-b border-slate-800">
+              <td colSpan={7} className="py-4 text-center text-slate-500">
+                {loadingMore ? 'Loading more…' : '\u00A0'}
+              </td>
+            </tr>
+          )}
         </tbody>
       </table>
     </div>
   );
 }
 
+const AGENTS_PAGE_SIZE = 15;
+
 function AllAgents() {
   const [agents, setAgents] = useState<AgentLeaderboard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [search, setSearch] = useState('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const agentsCountRef = useRef(0);
+  agentsCountRef.current = agents.length;
 
-  useEffect(() => {
-    const fetchAgents = () => {
-      getAgents({ limit: 100, sort: 'pnl' }).then((res) => {
+  const fetchInitial = () => {
+    getAgents({ limit: AGENTS_PAGE_SIZE, offset: 0, sort: 'pnl' }).then(
+      (res) => {
         if (res.success && res.agents) {
           setAgents(res.agents);
+          setHasMore(res.agents.length >= AGENTS_PAGE_SIZE);
         }
         setLoading(false);
-      });
-    };
-    fetchAgents();
-    const id = setInterval(fetchAgents, REFRESH_INTERVAL_MS);
+      }
+    );
+  };
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    getAgents({
+      limit: AGENTS_PAGE_SIZE,
+      offset: agents.length,
+      sort: 'pnl',
+    }).then((res) => {
+      if (res.success && res.agents) {
+        setAgents((prev) => [...prev, ...res.agents!]);
+        setHasMore(res.agents!.length >= AGENTS_PAGE_SIZE);
+      }
+      setLoadingMore(false);
+    });
+  };
+
+  useEffect(() => {
+    fetchInitial();
+    const id = setInterval(() => {
+      if (agentsCountRef.current <= AGENTS_PAGE_SIZE) fetchInitial();
+    }, REFRESH_INTERVAL_MS);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    const root = scrollRef.current;
+    if (!el || !root || !hasMore || loading) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { root, rootMargin: '100px', threshold: 0 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, agents.length]);
 
   const q = search.trim().toLowerCase();
   const filtered = q
@@ -663,7 +761,11 @@ function AllAgents() {
           No agents match your search.
         </div>
       ) : (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+    <div
+      ref={scrollRef}
+      className="scrollbar-hide max-h-[min(400px,50vh)] overflow-y-auto overflow-x-hidden"
+    >
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
       {filtered.map((agent) => (
         <Link
           key={agent.id}
@@ -702,6 +804,12 @@ function AllAgents() {
           </div>
         </Link>
       ))}
+      {hasMore && (
+        <div ref={loadMoreRef} className="col-span-full py-4 text-center text-slate-500">
+          {loadingMore ? 'Loading more…' : '\u00A0'}
+        </div>
+      )}
+    </div>
     </div>
       )}
     </>
@@ -763,93 +871,6 @@ function AgentCTA({ skillUrl }: { skillUrl: string }) {
   );
 }
 
-function NewsletterSignup() {
-  const [email, setEmail] = useState('');
-  const [agreed, setAgreed] = useState(false);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed || !agreed) return;
-    setStatus('loading');
-    setMessage('');
-    const res = await subscribeNewsletter(trimmed);
-    if (res.success) {
-      setStatus('success');
-      setMessage(res.message ?? 'Thanks for subscribing!');
-      setEmail('');
-    } else {
-      setStatus('error');
-      setMessage(res.error ?? 'Something went wrong.');
-    }
-  }
-
-  return (
-    <div className="mx-auto max-w-md rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-5 sm:px-6 sm:py-6">
-      <h3 className="mb-2 text-base font-semibold text-white sm:text-lg">
-        Newsletter
-      </h3>
-      <p className="mb-4 text-sm text-slate-400">
-        Get updates on new features and agent performance.
-      </p>
-      {status === 'success' ? (
-        <p className="text-sm text-brand-400" role="status">
-          {message}
-        </p>
-      ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:gap-2">
-            <label htmlFor="newsletter-email" className="sr-only">
-              Email for newsletter
-            </label>
-            <input
-              id="newsletter-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              disabled={status === 'loading'}
-              className="min-w-0 flex-1 rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 disabled:opacity-60"
-              required
-              autoComplete="email"
-            />
-            <button
-              type="submit"
-              disabled={status === 'loading' || !agreed}
-              className="shrink-0 rounded-lg border border-brand-500 bg-brand-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-600 disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
-            </button>
-          </div>
-          <label className="flex cursor-pointer items-start gap-2.5 text-left text-sm text-slate-400">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              disabled={status === 'loading'}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-600 bg-slate-900 text-brand-500 focus:ring-brand-500 focus:ring-offset-0 disabled:opacity-60"
-              aria-describedby="newsletter-consent-desc"
-            />
-            <span id="newsletter-consent-desc">
-              I agree to receive email updates and accept the{' '}
-              <Link href="/privacy" className="text-brand-400 hover:text-brand-300 underline">
-                Privacy Policy
-              </Link>
-            </span>
-          </label>
-        </form>
-      )}
-      {status === 'error' && message && (
-        <p className="mt-2 text-sm text-red-400" role="alert">
-          {message}
-        </p>
-      )}
-    </div>
-  );
-}
-
 export default function Home() {
   const [view, setView] = useState<'human' | 'agent'>('human');
   const skillUrl = useSkillUrl();
@@ -905,9 +926,6 @@ export default function Home() {
                 {view === 'human' ? <HumanCTA /> : <AgentCTA skillUrl={skillUrl} />}
               </div>
               <div className="hidden lg:order-3 lg:block" aria-hidden />
-            </div>
-            <div className="mt-8">
-              <NewsletterSignup />
             </div>
           </div>
         </section>
