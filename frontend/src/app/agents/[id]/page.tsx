@@ -517,7 +517,10 @@ export default function AgentDetailPage() {
                         backgroundColor: '#1e293b',
                         border: '1px solid #334155',
                         borderRadius: '8px',
+                        color: '#f8fafc',
                       }}
+                      itemStyle={{ color: '#f8fafc' }}
+                      labelStyle={{ color: '#f8fafc' }}
                       formatter={(value: number) => [
                         `$${value.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
@@ -573,7 +576,10 @@ export default function AgentDetailPage() {
                       backgroundColor: '#1e293b',
                       border: '1px solid #334155',
                       borderRadius: '8px',
+                      color: '#f8fafc',
                     }}
+                    itemStyle={{ color: '#f8fafc' }}
+                    labelStyle={{ color: '#f8fafc' }}
                     formatter={(value: number) => [
                       `$${Number(value).toLocaleString('en-US', {
                         minimumFractionDigits: 2,
@@ -632,7 +638,10 @@ export default function AgentDetailPage() {
                         backgroundColor: '#1e293b',
                         border: '1px solid #334155',
                         borderRadius: '8px',
+                        color: '#f8fafc',
                       }}
+                      itemStyle={{ color: '#f8fafc' }}
+                      labelStyle={{ color: '#f8fafc' }}
                       formatter={(value: number) => [
                         `$${value.toLocaleString('en-US', {
                           minimumFractionDigits: 2,
