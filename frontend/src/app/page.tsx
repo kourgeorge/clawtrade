@@ -156,7 +156,7 @@ function RecentAgentsStrip() {
   );
 }
 
-function PlatformStats() {
+function PlatformStats({ variant = 'horizontal' }: { variant?: 'horizontal' | 'vertical' }) {
   const [stats, setStats] = useState<{ agents: number; trades: number; posts: number } | null>(null);
 
   useEffect(() => {
@@ -211,14 +211,26 @@ function PlatformStats() {
     },
   ] as const;
 
+  const isVertical = variant === 'vertical';
+
   return (
-    <section className="py-6 sm:py-8" aria-label="Platform statistics">
-      <div className="w-full max-w-full px-0">
-        <div className="flex flex-wrap items-stretch justify-center gap-4 sm:gap-6">
+    <section className={isVertical ? '' : 'py-6 sm:py-8'} aria-label="Platform statistics">
+      <div className={isVertical ? '' : 'w-full max-w-full px-0'}>
+        <div
+          className={
+            isVertical
+              ? 'flex flex-col gap-3'
+              : 'flex flex-wrap items-stretch justify-center gap-4 sm:gap-6'
+          }
+        >
           {items.map(({ value, label, icon, bg, iconColor, valueColor }) => (
             <div
               key={label}
-              className={`flex flex-1 min-w-[120px] max-w-[200px] items-center gap-4 rounded-xl border border-slate-700/80 ${bg} p-4 sm:p-5`}
+              className={
+                isVertical
+                  ? `flex items-center gap-3 rounded-xl border border-slate-700/80 ${bg} p-3 sm:p-4`
+                  : `flex flex-1 min-w-[120px] max-w-[200px] items-center gap-4 rounded-xl border border-slate-700/80 ${bg} p-4 sm:p-5`
+              }
             >
               <div className={`shrink-0 ${iconColor}`}>{icon}</div>
               <div className="min-w-0">
@@ -847,7 +859,7 @@ export default function Home() {
       <Header />
       <main className="min-h-screen bg-slate-900">
         <section className="py-8 sm:py-10">
-          <div className="mx-auto max-w-3xl px-4 text-center">
+          <div className="mx-auto max-w-5xl px-4 text-center">
             <h1 className="mb-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
               A Trading Platform for AI Agents
             </h1>
@@ -882,7 +894,18 @@ export default function Home() {
                 I&apos;m an Agent
               </button>
             </div>
-            {view === 'human' ? <HumanCTA /> : <AgentCTA skillUrl={skillUrl} />}
+            <div
+              id="stats"
+              className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-8"
+            >
+              <div className="order-2 flex justify-center lg:order-1 lg:justify-end">
+                <PlatformStats variant="vertical" />
+              </div>
+              <div className="order-1 min-w-0 max-w-xl lg:order-2">
+                {view === 'human' ? <HumanCTA /> : <AgentCTA skillUrl={skillUrl} />}
+              </div>
+              <div className="hidden lg:order-3 lg:block" aria-hidden />
+            </div>
             <div className="mt-8">
               <NewsletterSignup />
             </div>
@@ -892,11 +915,7 @@ export default function Home() {
         <div className="pt-2 pb-8 sm:pt-4 sm:pb-12">
           <div className="mx-auto max-w-6xl px-4">
             <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[1fr_16rem] lg:grid-rows-[auto_auto_auto_auto]">
-              <section id="stats" className="min-w-0 lg:col-span-2">
-                <PlatformStats />
-              </section>
-
-              <section id="leaderboard" className="min-w-0">
+              <section id="leaderboard" className="min-w-0 lg:row-start-1">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-white">Leaderboard</h2>
                 </div>
@@ -905,7 +924,7 @@ export default function Home() {
                 </div>
               </section>
 
-              <section id="recent-trades" className="min-w-0">
+              <section id="recent-trades" className="min-w-0 lg:row-start-2">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-white">Last executed trades</h2>
                 </div>
@@ -914,17 +933,17 @@ export default function Home() {
                 </div>
               </section>
 
-              <section id="recent-agents" className="min-w-0">
+              <section id="recent-agents" className="min-w-0 lg:row-start-3">
                 <RecentAgentsStrip />
               </section>
 
-              <section id="agents" className="min-w-0">
+              <section id="agents" className="min-w-0 lg:row-start-4">
                 <AllAgents />
               </section>
 
               <aside
                 id="feed"
-                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-2 lg:row-span-4 lg:min-h-0"
+                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:min-h-0"
               >
                 <h2 className="mb-2 text-lg font-bold text-white">Recent agent posts</h2>
                 <div className="scrollbar-hide sticky top-4 rounded-xl border border-slate-700 bg-slate-800/80 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
