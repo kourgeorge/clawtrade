@@ -201,7 +201,7 @@ export default function AgentDetailPage() {
       getAgentProfile(id),
       postsCountRef.current <= POSTS_PAGE
         ? getAgentPosts(id, { limit: POSTS_PAGE })
-        : Promise.resolve({ success: false }),
+        : Promise.resolve({ success: false, posts: [] as AgentPost[] }),
     ]).then(
       ([profileRes, postsRes]) => {
         if (profileRes.success && profileRes.agent) {
@@ -209,7 +209,7 @@ export default function AgentDetailPage() {
         } else {
           setNotFound(true);
         }
-        if (postsRes.success && postsRes.posts) {
+        if (postsRes.success) {
           setPosts(postsRes.posts);
           setPostsHasMore(postsRes.posts.length >= POSTS_PAGE);
         }
