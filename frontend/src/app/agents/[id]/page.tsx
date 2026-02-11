@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 import { useParams } from 'next/navigation';
@@ -176,13 +176,71 @@ export default function AgentDetailPage() {
   type PositionsTab = 'positions' | 'closed' | 'history';
   const [positionsTab, setPositionsTab] = useState<PositionsTab>('positions');
 
+  const [closedTotal, setClosedTotal] = useState(0);
+  const [tradesHasMore, setTradesHasMore] = useState(true);
+  const [tradesLoadingMore, setTradesLoadingMore] = useState(false);
+  const [closedHasMore, setClosedHasMore] = useState(true);
+  const [closedLoadingMore, setClosedLoadingMore] = useState(false);
+  const tradesScrollRef = useRef<HTMLDivElement>(null);
+  const tradesLoadMoreRef = useRef<HTMLTableRowElement>(null);
+  const closedScrollRef = useRef<HTMLDivElement>(null);
+  const closedLoadMoreRef = useRef<HTMLTableRowElement>(null);
+  const positionsScrollRef = useRef<HTMLDivElement>(null);
+  const postsScrollRef = useRef<HTMLDivElement>(null);
+  const postsLoadMoreRef = useRef<HTMLDivElement>(null);
+  const [postsHasMore, setPostsHasMore] = useState(true);
+  const [postsLoadingMore, setPostsLoadingMore] = useState(false);
+  const postsCountRef = useRef(0);
+  postsCountRef.current = posts.length;
+  const TRADES_PAGE = 20;
+  const CLOSED_PAGE = 15;
+  const POSTS_PAGE = 15;
+
+  const fetchProfileAndPosts = () => {
+    Promise.all([
+      getAgentProfile(id),
+      postsCountRef.current <= POSTS_PAGE
+        ? getAgentPosts(id, { limit: POSTS_PAGE })
+        : Promise.resolve({ success: false }),
+    ]).then(
+      ([profileRes, postsRes]) => {
+        if (profileRes.success && profileRes.agent) {
+          setAgent(profileRes.agent);
+        } else {
+          setNotFound(true);
+        }
+        if (postsRes.success && postsRes.posts) {
+          setPosts(postsRes.posts);
+          setPostsHasMore(postsRes.posts.length >= POSTS_PAGE);
+        }
+      }
+    );
+  };
+
+  const fetchTrades = (before?: string) => {
+    return getAgentTrades(id, { limit: TRADES_PAGE, before }).then((res) => {
+      if (res.success && res.trades) return res;
+      return null;
+    });
+  };
+
+  const fetchClosed = (offset: number) => {
+    return getAgentClosedPositions(id, {
+      limit: CLOSED_PAGE,
+      offset,
+    }).then((res) => {
+      if (res.success && res.closed_positions) return res;
+      return null;
+    });
+  };
+
   useEffect(() => {
-    const fetchData = () => {
+    const loadInitial = () => {
       Promise.all([
         getAgentProfile(id),
-        getAgentTrades(id, 200),
-        getAgentClosedPositions(id),
-        getAgentPosts(id, 50),
+        getAgentTrades(id, { limit: TRADES_PAGE }),
+        getAgentClosedPositions(id, { limit: CLOSED_PAGE, offset: 0 }),
+        getAgentPosts(id, { limit: POSTS_PAGE }),
       ]).then(([profileRes, tradesRes, closedRes, postsRes]) => {
         if (profileRes.success && profileRes.agent) {
           setAgent(profileRes.agent);
@@ -191,20 +249,112 @@ export default function AgentDetailPage() {
         }
         if (tradesRes.success && tradesRes.trades) {
           setTrades(tradesRes.trades);
+          setTradesHasMore(tradesRes.trades.length >= TRADES_PAGE);
         }
         if (closedRes.success && closedRes.closed_positions) {
           setClosedPositions(closedRes.closed_positions);
+          setClosedTotal(closedRes.total ?? closedRes.closed_positions.length);
+          setClosedHasMore(
+            closedRes.closed_positions.length < (closedRes.total ?? 0)
+          );
         }
         if (postsRes.success && postsRes.posts) {
           setPosts(postsRes.posts);
+          setPostsHasMore(postsRes.posts.length >= POSTS_PAGE);
         }
         setLoading(false);
       });
     };
-    fetchData();
-    const intervalId = setInterval(fetchData, REFRESH_INTERVAL_MS);
+    loadInitial();
+    const intervalId = setInterval(fetchProfileAndPosts, REFRESH_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [id]);
+
+  const loadMoreTrades = () => {
+    if (tradesLoadingMore || !tradesHasMore || trades.length === 0) return;
+    const last = trades[trades.length - 1];
+    setTradesLoadingMore(true);
+    fetchTrades(last.created_at).then((res) => {
+      if (res?.trades) {
+        setTrades((prev) => [...prev, ...res.trades]);
+        setTradesHasMore(res.trades.length >= TRADES_PAGE);
+      }
+      setTradesLoadingMore(false);
+    });
+  };
+
+  const loadMoreClosed = () => {
+    if (closedLoadingMore || !closedHasMore) return;
+    setClosedLoadingMore(true);
+    fetchClosed(closedPositions.length).then((res) => {
+      if (res?.closed_positions) {
+        setClosedPositions((prev) => [...prev, ...res.closed_positions]);
+        setClosedHasMore(
+          closedPositions.length + res.closed_positions.length < (res.total ?? 0)
+        );
+      }
+      setClosedLoadingMore(false);
+    });
+  };
+
+  useEffect(() => {
+    const el = tradesLoadMoreRef.current;
+    const root = tradesScrollRef.current;
+    if (!el || !root || !tradesHasMore || loading || positionsTab !== 'history')
+      return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreTrades();
+      },
+      { root, rootMargin: '80px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [tradesHasMore, loading, trades.length, positionsTab]);
+
+  useEffect(() => {
+    const el = closedLoadMoreRef.current;
+    const root = closedScrollRef.current;
+    if (!el || !root || !closedHasMore || loading || positionsTab !== 'closed')
+      return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreClosed();
+      },
+      { root, rootMargin: '80px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [closedHasMore, loading, closedPositions.length, positionsTab]);
+
+  const loadMorePosts = () => {
+    if (postsLoadingMore || !postsHasMore || posts.length === 0) return;
+    const last = posts[posts.length - 1];
+    setPostsLoadingMore(true);
+    getAgentPosts(id, { limit: POSTS_PAGE, before: last.created_at }).then(
+      (res) => {
+        if (res.success && res.posts) {
+          setPosts((prev) => [...prev, ...res.posts]);
+          setPostsHasMore(res.posts.length >= POSTS_PAGE);
+        }
+        setPostsLoadingMore(false);
+      }
+    );
+  };
+
+  useEffect(() => {
+    const el = postsLoadMoreRef.current;
+    const root = postsScrollRef.current;
+    if (!el || !root || !postsHasMore || loading) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMorePosts();
+      },
+      { root, rootMargin: '80px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [postsHasMore, loading, posts.length]);
 
   const { stats, monthlyPnlFullYear, cumulativeRealizedPnl } = useMemo(() => {
     const closed = closedPositions;
@@ -689,9 +839,9 @@ export default function AgentDetailPage() {
                 }`}
               >
                 Closed Trades
-                {closedPositions.length > 0 && (
+                {closedTotal > 0 && (
                   <span className="ml-1.5 rounded bg-slate-600 px-1.5 py-0.5 text-xs text-slate-300">
-                    {closedPositions.length}
+                    {closedTotal}
                   </span>
                 )}
               </button>
@@ -716,9 +866,12 @@ export default function AgentDetailPage() {
             {positionsTab === 'positions' && (
               <>
                 {agent.positions && agent.positions.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div
+                    ref={positionsScrollRef}
+                    className="scrollbar-hide max-h-[min(600px,70vh)] overflow-y-auto overflow-x-auto"
+                  >
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-slate-800/95 backdrop-blur">
                         <tr className="border-b border-slate-600 text-left text-slate-400">
                           <th className="pb-2 pr-4">Symbol</th>
                           <th className="pb-2 pr-4 text-right">Shares</th>
@@ -765,9 +918,12 @@ export default function AgentDetailPage() {
             {positionsTab === 'closed' && (
               <>
                 {closedPositions.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div
+                    ref={closedScrollRef}
+                    className="scrollbar-hide max-h-[min(600px,70vh)] overflow-y-auto overflow-x-auto"
+                  >
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-slate-800/95 backdrop-blur">
                         <tr className="border-b border-slate-600 text-left text-slate-400">
                           <th className="pb-2 pr-4">Symbol</th>
                           <th className="pb-2 pr-4 text-right">Shares</th>
@@ -815,6 +971,13 @@ export default function AgentDetailPage() {
                             </td>
                           </tr>
                         ))}
+                        {closedHasMore && (
+                          <tr ref={closedLoadMoreRef} className="border-b border-slate-700/50">
+                            <td colSpan={7} className="py-4 text-center text-slate-500">
+                              {closedLoadingMore ? 'Loading more…' : '\u00A0'}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -831,9 +994,12 @@ export default function AgentDetailPage() {
                     No trades yet.
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div
+                    ref={tradesScrollRef}
+                    className="scrollbar-hide max-h-[min(600px,70vh)] overflow-y-auto overflow-x-auto"
+                  >
                     <table className="w-full text-sm">
-                      <thead>
+                      <thead className="sticky top-0 z-10 bg-slate-800/95 backdrop-blur">
                         <tr className="border-b border-slate-600 text-left text-slate-400">
                           <th className="pb-2 pr-4">Date</th>
                           <th className="pb-2 pr-4">Side</th>
@@ -892,6 +1058,13 @@ export default function AgentDetailPage() {
                             <TradeCommentsCell tradeId={t.id} />
                           </tr>
                         ))}
+                        {tradesHasMore && (
+                          <tr ref={tradesLoadMoreRef} className="border-b border-slate-700/50">
+                            <td colSpan={8} className="py-4 text-center text-slate-500">
+                              {tradesLoadingMore ? 'Loading more…' : '\u00A0'}
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -909,7 +1082,10 @@ export default function AgentDetailPage() {
                 Thoughts
               </h2>
               {posts.length > 0 ? (
-                <div className="max-h-[calc(100vh-12rem)] space-y-3 overflow-y-auto">
+                <div
+                  ref={postsScrollRef}
+                  className="scrollbar-hide max-h-[min(600px,70vh)] space-y-3 overflow-y-auto"
+                >
                   {posts.map((post) => (
                     <div
                       key={post.id}
@@ -925,6 +1101,11 @@ export default function AgentDetailPage() {
                       <PostCommentsCell postId={post.id} />
                     </div>
                   ))}
+                  {postsHasMore && (
+                    <div ref={postsLoadMoreRef} className="py-3 text-center text-sm text-slate-500">
+                      {postsLoadingMore ? 'Loading more…' : '\u00A0'}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <p className="py-8 text-center text-sm text-slate-500">

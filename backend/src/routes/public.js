@@ -170,18 +170,33 @@ export async function getAgentPositions(request, reply) {
 
 export async function getAgentTrades(request, reply) {
   const { id } = request.params;
-  const { limit = 50 } = request.query || {};
+  const { limit = 50, before } = request.query || {};
   const limitNum = Math.min(parseInt(limit) || 50, 100);
+  const hasBefore = typeof before === 'string' && before.trim().length > 0;
 
   const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
   if (exists.length === 0) {
     return reply.status(404).send({ success: false, error: 'Agent not found' });
   }
 
-  const { rows } = await pool.query(
-    'SELECT id, symbol, side, shares, price, total_value, reasoning, created_at FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
-    [id, limitNum]
-  );
+  let rows;
+  if (hasBefore) {
+    const beforeDate = new Date(before.trim());
+    if (isNaN(beforeDate.getTime())) {
+      return reply.status(400).send({ success: false, error: 'Invalid before cursor' });
+    }
+    const { rows: r } = await pool.query(
+      'SELECT id, symbol, side, shares, price, total_value, reasoning, created_at FROM trades WHERE agent_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3',
+      [id, before.trim(), limitNum]
+    );
+    rows = r;
+  } else {
+    const { rows: r } = await pool.query(
+      'SELECT id, symbol, side, shares, price, total_value, reasoning, created_at FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
+      [id, limitNum]
+    );
+    rows = r;
+  }
 
   const trades = rows.map((t) => ({
     ...t,
@@ -315,7 +330,13 @@ export async function getAgentClosedPositions(request, reply) {
   }
 
   closed.sort((a, b) => new Date(b.exit_date) - new Date(a.exit_date));
-  return reply.send({ success: true, closed_positions: closed });
+
+  const { limit = 50, offset = 0 } = request.query || {};
+  const limitNum = Math.min(parseInt(limit) || 50, 100);
+  const offsetNum = Math.max(0, parseInt(offset) || 0);
+  const paginated = closed.slice(offsetNum, offsetNum + limitNum);
+
+  return reply.send({ success: true, closed_positions: paginated, total: closed.length });
 }
 
 export async function getAgentEquity(request, reply) {
@@ -436,18 +457,33 @@ export async function getRecentTrades(request, reply) {
 
 export async function getAgentPosts(request, reply) {
   const { id } = request.params;
-  const { limit = 50 } = request.query || {};
+  const { limit = 50, before } = request.query || {};
   const limitNum = Math.min(parseInt(limit) || 50, 100);
+  const hasBefore = typeof before === 'string' && before.trim().length > 0;
 
   const { rows: exists } = await pool.query('SELECT 1 FROM agents WHERE id = $1', [id]);
   if (exists.length === 0) {
     return reply.status(404).send({ success: false, error: 'Agent not found' });
   }
 
-  const { rows } = await pool.query(
-    'SELECT id, agent_id, content, created_at FROM agent_posts WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
-    [id, limitNum]
-  );
+  let rows;
+  if (hasBefore) {
+    const beforeDate = new Date(before.trim());
+    if (isNaN(beforeDate.getTime())) {
+      return reply.status(400).send({ success: false, error: 'Invalid before cursor' });
+    }
+    const { rows: r } = await pool.query(
+      'SELECT id, agent_id, content, created_at FROM agent_posts WHERE agent_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3',
+      [id, before.trim(), limitNum]
+    );
+    rows = r;
+  } else {
+    const { rows: r } = await pool.query(
+      'SELECT id, agent_id, content, created_at FROM agent_posts WHERE agent_id = $1 ORDER BY created_at DESC LIMIT $2',
+      [id, limitNum]
+    );
+    rows = r;
+  }
 
   const posts = rows.map((r) => ({
     ...r,

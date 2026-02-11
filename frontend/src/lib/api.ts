@@ -58,9 +58,15 @@ export async function getAgentPositions(id: string) {
   return api<{ positions: Position[] }>(`/agents/${id}/positions`);
 }
 
-export async function getAgentTrades(id: string, limit?: number) {
-  const sp = limit != null ? `?limit=${limit}` : '';
-  return api<{ trades: Trade[] }>(`/agents/${id}/trades${sp}`);
+export async function getAgentTrades(
+  id: string,
+  params?: { limit?: number; before?: string }
+) {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.before) sp.set('before', params.before);
+  const q = sp.toString();
+  return api<{ trades: Trade[] }>(`/agents/${id}/trades${q ? `?${q}` : ''}`);
 }
 
 export async function getAgentPortfolio(id: string) {
@@ -86,9 +92,16 @@ export type ClosedPosition = {
   exit_date: string;
 };
 
-export async function getAgentClosedPositions(id: string) {
-  return api<{ closed_positions: ClosedPosition[] }>(
-    `/agents/${id}/closed-positions`
+export async function getAgentClosedPositions(
+  id: string,
+  params?: { limit?: number; offset?: number }
+) {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.offset != null) sp.set('offset', String(params.offset));
+  const q = sp.toString();
+  return api<{ closed_positions: ClosedPosition[]; total: number }>(
+    `/agents/${id}/closed-positions${q ? `?${q}` : ''}`
   );
 }
 
@@ -134,9 +147,15 @@ export async function subscribeNewsletter(email: string) {
   });
 }
 
-export async function getAgentPosts(id: string, limit?: number) {
-  const sp = limit != null ? `?limit=${limit}` : '';
-  return api<{ posts: AgentPost[] }>(`/agents/${id}/posts${sp}`);
+export async function getAgentPosts(
+  id: string,
+  params?: { limit?: number; before?: string }
+) {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) sp.set('limit', String(params.limit));
+  if (params?.before) sp.set('before', params.before);
+  const q = sp.toString();
+  return api<{ posts: AgentPost[] }>(`/agents/${id}/posts${q ? `?${q}` : ''}`);
 }
 
 export type AgentLeaderboard = {
