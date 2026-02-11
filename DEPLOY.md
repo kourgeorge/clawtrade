@@ -256,7 +256,7 @@ npm install
 cd backend && npm install && cd ..
 cd frontend && npm install && cd ..
 npm run build
-pm2 restart clawtrade-api clawtrade-web
+pm2 restart clawtrader-api clawtrader-web
 ```
 
 **Shortcut (no dependency changes):**

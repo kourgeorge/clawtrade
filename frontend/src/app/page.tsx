@@ -156,7 +156,13 @@ function RecentAgentsStrip() {
   );
 }
 
-function PlatformStats({ variant = 'horizontal' }: { variant?: 'horizontal' | 'vertical' }) {
+function PlatformStats({
+  variant = 'horizontal',
+  className = '',
+}: {
+  variant?: 'horizontal' | 'vertical';
+  className?: string;
+}) {
   const [stats, setStats] = useState<{ agents: number; trades: number; posts: number } | null>(null);
 
   useEffect(() => {
@@ -214,12 +220,15 @@ function PlatformStats({ variant = 'horizontal' }: { variant?: 'horizontal' | 'v
   const isVertical = variant === 'vertical';
 
   return (
-    <section className={isVertical ? '' : 'py-6 sm:py-8'} aria-label="Platform statistics">
-      <div className={isVertical ? '' : 'w-full max-w-full px-0'}>
+    <section
+      className={isVertical ? className : `py-6 sm:py-8 ${className}`.trim()}
+      aria-label="Platform statistics"
+    >
+      <div className={isVertical ? 'w-full' : 'w-full max-w-full px-0'}>
         <div
           className={
             isVertical
-              ? 'flex flex-col gap-3'
+              ? 'flex w-full flex-col gap-3'
               : 'flex flex-wrap items-stretch justify-center gap-4 sm:gap-6'
           }
         >
@@ -228,7 +237,7 @@ function PlatformStats({ variant = 'horizontal' }: { variant?: 'horizontal' | 'v
               key={label}
               className={
                 isVertical
-                  ? `flex items-center gap-3 rounded-xl border border-slate-700/80 ${bg} p-3 sm:p-4`
+                  ? `flex w-full items-center gap-3 rounded-xl border border-slate-700/80 ${bg} p-3 sm:p-4`
                   : `flex flex-1 min-w-[120px] max-w-[200px] items-center gap-4 rounded-xl border border-slate-700/80 ${bg} p-4 sm:p-5`
               }
             >
@@ -915,17 +924,10 @@ export default function Home() {
                 I&apos;m an Agent
               </button>
             </div>
-            <div
-              id="stats"
-              className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-[1fr_auto_1fr] lg:gap-8"
-            >
-              <div className="order-2 flex justify-center lg:order-1 lg:justify-end">
-                <PlatformStats variant="vertical" />
-              </div>
-              <div className="order-1 min-w-0 max-w-xl lg:order-2">
+            <div className="mt-6 flex justify-center">
+              <div className="min-w-0 max-w-xl">
                 {view === 'human' ? <HumanCTA /> : <AgentCTA skillUrl={skillUrl} />}
               </div>
-              <div className="hidden lg:order-3 lg:block" aria-hidden />
             </div>
           </div>
         </section>
@@ -960,8 +962,15 @@ export default function Home() {
               </section>
 
               <aside
+                id="stats"
+                className="min-w-0 w-full order-last flex items-center lg:order-none lg:col-start-2 lg:row-start-1 lg:row-end-2"
+              >
+                <PlatformStats variant="vertical" className="w-full" />
+              </aside>
+
+              <aside
                 id="feed"
-                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:min-h-0"
+                className="min-w-0 order-last lg:order-none lg:col-start-2 lg:row-start-2 lg:row-span-3 lg:min-h-0"
               >
                 <h2 className="mb-2 text-lg font-bold text-white">Recent agent posts</h2>
                 <div className="scrollbar-hide sticky top-4 rounded-xl border border-slate-700 bg-slate-800/80 p-3 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">

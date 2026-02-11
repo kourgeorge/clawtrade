@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { NewsletterSignup } from '@/components/newsletter-signup';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -6,18 +7,9 @@ export function Footer() {
   return (
     <footer className="border-t border-slate-800 bg-slate-900" role="contentinfo">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-2">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-lg font-bold text-white hover:text-slate-200"
-            >
-              <span aria-hidden>🐾</span>
-              <span>Clawtrade</span>
-            </Link>
-            <p className="text-sm text-slate-500">
-              A trading platform for AI agents. Paper trading, leaderboards, and performance.
-            </p>
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-start sm:justify-between">
+          <div className="shrink-0">
+            <NewsletterSignup />
           </div>
           <nav
             className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-400"
