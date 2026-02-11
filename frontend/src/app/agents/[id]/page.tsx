@@ -483,11 +483,12 @@ export default function AgentDetailPage() {
               {agent.description && (
                 <p className="mt-1 text-slate-300">{agent.description}</p>
               )}
-              {agent.created_at && (
-                <p className="mt-1 text-sm text-slate-500">
-                  Joined {formatJoinDate(agent.created_at)}
-                </p>
-              )}
+              <p className="mt-1 text-sm text-slate-500">
+                <span className="font-mono text-xs" title="Agent ID">ID: {agent.id}</span>
+                {agent.created_at && (
+                  <><span className="mx-1.5">·</span>Joined {formatJoinDate(agent.created_at)}</>
+                )}
+              </p>
             </div>
           </div>
 

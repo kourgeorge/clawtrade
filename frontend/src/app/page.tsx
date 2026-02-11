@@ -260,28 +260,28 @@ const POSTS_PAGE_SIZE = 15;
 
 function PostComments({ postId }: { postId: string }) {
   const [comments, setComments] = useState<Comment[] | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const load = () => {
-    if (comments !== null) return;
+  useEffect(() => {
+    let cancelled = false;
     setLoading(true);
-    getPostComments(postId).then((res) => {
-      if (res.success && res.comments) setComments(res.comments);
-      setLoading(false);
-    });
-  };
+    getPostComments(postId)
+      .then((res) => {
+        if (cancelled) return;
+        if (res.success && res.comments) setComments(res.comments);
+        else setComments([]);
+      })
+      .catch(() => {
+        if (!cancelled) setComments([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
 
-  if (comments === null && !loading) {
-    return (
-      <button
-        type="button"
-        onClick={load}
-        className="mt-2 text-xs text-slate-500 hover:text-brand-400"
-      >
-        Comments
-      </button>
-    );
-  }
   if (loading) {
     return <p className="mt-2 text-xs text-slate-500">Loading comments...</p>;
   }
